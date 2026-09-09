@@ -1,0 +1,48 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Inter', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+        'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /* Brand palette — wine + cream */
+    --color-wine-50: #fbeef0;
+    --color-wine-100: #f5d5da;
+    --color-wine-200: #e9aab4;
+    --color-wine-300: #db7d8d;
+    --color-wine-400: #c4566a;
+    --color-wine-500: #a13a4d;
+    --color-wine-600: #832c3d;
+    --color-wine-700: #691d2a;
+    --color-wine-800: #551722;
+    --color-wine-900: #43121b;
+
+    --color-cream-50: #fffaf3;
+    --color-cream-100: #fff2e3;
+    --color-cream-200: #fbe6cd;
+    --color-cream-300: #f5d4ad;
+
+    --color-brand: #691d2a;
+    --color-brand-bg: #fff2e3;
+}
+
+@layer base {
+    body {
+        background-color: var(--color-brand-bg);
+        color: #2b2b2b;
+    }
+}
+
+@layer utilities {
+    .scrollbar-thin {
+        scrollbar-width: thin;
+    }
+}
+
+[x-cloak] {
+    display: none !important;
+}
