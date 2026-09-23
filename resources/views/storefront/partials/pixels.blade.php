@@ -1,5 +1,10 @@
 @inject('settings', 'App\Services\SettingsService')
-@php $px = $settings->group('pixels'); @endphp
+@inject('analytics', 'App\Services\AnalyticsService')
+@php
+    $px = $settings->group('pixels');
+    $trackingConfig = $analytics->browserConfig();
+    $queuedEvents = $analytics->browserEnabled() ? $analytics->pull() : [];
+@endphp
 
 @if(!empty($px['fb_enabled']) && !empty($px['fb_pixel']))
     {{-- Meta Pixel --}}
@@ -37,3 +42,68 @@
         ttq.load(@json($px['tiktok']));ttq.page();}(window,document,'ttq');
     </script>
 @endif
+
+{{--
+    nfTrack(name, params, eventId): one GA4-shaped e-commerce event fanned out to every enabled
+    platform. Always defined (a no-op without pixels) so views and app.js can call it freely.
+--}}
+<script>
+    (function () {
+        var cfg = @json(['map' => $trackingConfig['map']]);
+        window.dataLayer = window.dataLayer || [];
+
+        window.nfTrack = function (name, params, eventId) {
+            params = params || {};
+            var items = params.items || [];
+            var map = cfg.map[name] || {};
+
+            try {
+                @if($trackingConfig['ga4'])
+                if (window.gtag) {
+                    gtag('event', name, params);
+                }
+                @endif
+                @if($trackingConfig['gtm'])
+                window.dataLayer.push({ ecommerce: null });
+                window.dataLayer.push({ event: name, event_id: eventId, ecommerce: params });
+                @endif
+                @if($trackingConfig['meta'])
+                if (window.fbq && map.meta) {
+                    var fb = {
+                        currency: params.currency,
+                        value: params.value,
+                        content_type: items.length ? 'product' : undefined,
+                        content_ids: items.map(function (i) { return i.item_id; }),
+                        contents: items.map(function (i) { return { id: i.item_id, quantity: i.quantity, item_price: i.price }; }),
+                        num_items: items.reduce(function (n, i) { return n + (i.quantity || 1); }, 0) || undefined,
+                        content_name: items.length === 1 ? items[0].item_name : undefined,
+                        content_category: items.length === 1 ? items[0].item_category : undefined,
+                        search_string: params.search_term,
+                        order_id: params.transaction_id,
+                    };
+                    fbq('track', map.meta, fb, { eventID: eventId });
+                }
+                @endif
+                @if($trackingConfig['tiktok'])
+                if (window.ttq && map.tiktok) {
+                    ttq.track(map.tiktok, {
+                        currency: params.currency,
+                        value: params.value,
+                        query: params.search_term,
+                        content_type: items.length ? 'product' : undefined,
+                        contents: items.map(function (i) { return { content_id: i.item_id, content_name: i.item_name, quantity: i.quantity, price: i.price }; }),
+                    }, { event_id: eventId });
+                }
+                @endif
+            } catch (e) {
+                console.warn('nfTrack failed', name, e);
+            }
+        };
+
+        // Replay events the server queued (from this request or a redirect before it).
+        window.nfFlush = function (events) {
+            (events || []).forEach(function (e) { window.nfTrack(e.name, e.params, e.id); });
+        };
+        window.nfFlush(@json($queuedEvents));
+    })();
+</script>

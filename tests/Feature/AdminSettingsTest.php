@@ -24,7 +24,8 @@ class AdminSettingsTest extends TestCase
         $this->actingAs($this->admin(), 'admin')
             ->get(route('admin.settings.index'))
             ->assertOk()
-            ->assertSee('Store profile')
+            ->assertSee('স্টোরের তথ্য')
+            ->assertSee('ডেলিভারি চার্জ')
             ->assertSee('Steadfast Courier')
             ->assertSee('Facebook / Meta Pixel');
     }

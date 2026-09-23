@@ -25,7 +25,7 @@ class InventoryService
     public function reserveStock(Order $order): void
     {
         DB::transaction(function () use ($order): void {
-            $ttlMinutes = $order->payment_method->value === 'online'
+            $ttlMinutes = $order->payment_method->isPrepaid()
                 ? (int) config('shop.reservation_ttl_minutes.online', 15)
                 : (int) config('shop.reservation_ttl_minutes.cod', 1440);
 

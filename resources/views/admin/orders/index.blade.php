@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Orders')
+@section('title', 'অর্ডার')
 
 @php $symbol = config('shop.currency_symbol'); @endphp
 
@@ -12,12 +12,12 @@
         <input name="search" value="{{ request('search') }}" placeholder="Order #, name or phone…"
             class="flex-1 min-w-48 rounded-lg border border-gray-300 px-3.5 py-2 text-sm focus:border-wine-500 focus:ring-2 focus:ring-wine-500/30 outline-none">
         <select name="status" class="rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white">
-            <option value="">All statuses</option>
+            <option value="">সব অবস্থা</option>
             @foreach ($statuses as $status)
                 <option value="{{ $status->value }}" @selected(request('status')===$status->value)>{{ $status->label() }}</option>
             @endforeach
         </select>
-        <button class="rounded-lg bg-wine-700 px-4 py-2 text-sm font-medium text-cream-100 hover:bg-wine-800">Filter</button>
+        <button class="inline-flex items-center gap-1.5 rounded-lg bg-wine-700 px-4 py-2 text-sm font-medium text-cream-100 hover:bg-wine-800"><x-ui.icon name="filter" :size="15" />Filter</button>
     </form>
 
     <div class="rounded-xl bg-white border border-cream-300/60 shadow-sm overflow-hidden">
@@ -48,7 +48,7 @@
                         <td class="px-5 py-3 text-gray-500">{{ $order->created_at->format('M j, Y') }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="px-5 py-10 text-center text-gray-400">No orders found.</td></tr>
+                    <tr><td colspan="6" class="px-5 py-10 text-center text-gray-400">কোনো অর্ডার পাওয়া যায়নি।</td></tr>
                 @endforelse
             </tbody>
         </table>

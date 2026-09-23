@@ -6,8 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\User;
 use App\Services\ActivityLogger;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 
 class CustomerController extends Controller
@@ -63,9 +66,9 @@ class CustomerController extends Controller
     /**
      * Guest "customers" aggregated from orders that have no linked user, keyed by email.
      *
-     * @return \Illuminate\Database\Eloquent\Builder<Order>
+     * @return Builder<Order>
      */
-    private function guestQuery(string $search): \Illuminate\Database\Eloquent\Builder
+    private function guestQuery(string $search): Builder
     {
         return Order::query()
             ->whereNull('user_id')
@@ -91,7 +94,7 @@ class CustomerController extends Controller
     /**
      * Build a single guest profile with full order history for the slide-over.
      *
-     * @return array{email: string, name: string, phone: ?string, orders_count: int, orders_total: float, first_order_at: ?\Illuminate\Support\Carbon, orders: \Illuminate\Database\Eloquent\Collection<int, Order>}|null
+     * @return array{email: string, name: string, phone: ?string, orders_count: int, orders_total: float, first_order_at: ?Carbon, orders: Collection<int, Order>}|null
      */
     private function guestDetail(string $email): ?array
     {
@@ -137,6 +140,6 @@ class CustomerController extends Controller
             ($validated['is_active'] ? 'Activated' : 'Deactivated')." customer {$customer->name}",
         );
 
-        return redirect()->route('admin.customers.index', ['view' => $customer->id])->with('success', 'Customer updated.');
+        return redirect()->route('admin.customers.index', ['view' => $customer->id])->with('success', 'গ্রাহকের তথ্য আপডেট হয়েছে।');
     }
 }

@@ -2,11 +2,11 @@
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
-<body style="margin:0;background:#fff2e3;font-family:Arial,Helvetica,sans-serif;color:#111;">
+<body style="margin:0;background:#FAF9F8;font-family:Arial,Helvetica,sans-serif;color:#111;">
     <div style="max-width:560px;margin:0 auto;padding:32px 20px;">
-        <div style="font-weight:700;font-size:20px;letter-spacing:0.24em;color:#691d2a;text-align:center;margin-bottom:24px;">NAFIAN</div>
+        <div style="font-weight:700;font-size:20px;letter-spacing:0.24em;color:#3B2F2D;text-align:center;margin-bottom:24px;">NAFIAN</div>
 
-        <div style="background:#fff;border:1px solid #EADBC4;border-radius:12px;padding:28px;">
+        <div style="background:#fff;border:1px solid #E9E4E0;border-radius:12px;padding:28px;">
             @if($event === 'created')
                 <h1 style="font-size:22px;margin:0 0 8px;">Thank you for your order</h1>
                 <p style="color:#6B7280;font-size:14px;margin:0 0 20px;">We've received your order and are getting it ready.</p>
@@ -18,7 +18,7 @@
                 <p style="color:#6B7280;font-size:14px;margin:0 0 20px;">Your order is now <strong>{{ $order->status->label() }}</strong>.</p>
             @endif
 
-            <div style="font-family:'Courier New',monospace;font-size:14px;color:#691d2a;background:#F8EAD6;display:inline-block;padding:6px 12px;border-radius:6px;margin-bottom:20px;">{{ $order->order_number }}</div>
+            <div style="font-family:'Courier New',monospace;font-size:14px;color:#3B2F2D;background:#F3EFEC;display:inline-block;padding:6px 12px;border-radius:6px;margin-bottom:20px;">{{ $order->order_number }}</div>
 
             <table style="width:100%;border-collapse:collapse;font-size:14px;">
                 @foreach($order->items as $item)
@@ -41,7 +41,7 @@
             </div>
 
             <div style="text-align:center;margin-top:26px;">
-                <a href="{{ route('store.track', ['order' => $order->order_number]) }}" style="display:inline-block;background:#691d2a;color:#fff;text-decoration:none;font-size:14px;font-weight:bold;padding:12px 24px;border-radius:8px;">Track your order</a>
+                <a href="{{ route('store.track', ['order' => $order->order_number]) }}" style="display:inline-block;background:#3B2F2D;color:#fff;text-decoration:none;font-size:14px;font-weight:bold;padding:12px 24px;border-radius:8px;">Track your order</a>
             </div>
         </div>
 

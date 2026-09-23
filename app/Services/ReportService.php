@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Sale;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -126,7 +127,7 @@ class ReportService
             'delivery_total' => (float) (clone $base)->sum('delivery_charge'),
             'net_revenue' => (float) (clone $base)->sum('total_amount'),
             'cod_total' => (float) (clone $base)->where('payment_method', 'cod')->sum('total_amount'),
-            'online_total' => (float) (clone $base)->where('payment_method', 'online')->sum('total_amount'),
+            'online_total' => (float) (clone $base)->where('payment_method', '!=', 'cod')->sum('total_amount'),
             'order_count' => (clone $base)->count(),
         ];
     }
@@ -230,7 +231,104 @@ class ReportService
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Builder<ProductVariant>
+     * Admin dashboard: KPIs vs the previous period, daily sales, status mix and stock alerts.
+     *
+     * @return array{
+     *     revenue: float, revenue_change: ?float, orders: int, orders_change: ?float,
+     *     average_order: float, average_order_change: ?float,
+     *     cod_success_rate: ?int, returned: int,
+     *     daily: list<array{date: Carbon, total: float}>,
+     *     statuses: array{new: int, processing: int, shipped: int, delivered: int, cancelled: int},
+     *     low_stock: Collection<int, ProductVariant>
+     * }
+     */
+    public function getDashboardOverview(int $days = 30, int $chartDays = 14): array
+    {
+        $end = Carbon::now();
+        $start = Carbon::today()->subDays($days - 1);
+        $previousStart = $start->copy()->subDays($days);
+
+        $current = $this->periodTotals($start, $end);
+        $previous = $this->periodTotals($previousStart, $start->copy()->subSecond());
+
+        $codClosed = Order::whereBetween('created_at', [$start, $end])
+            ->where('payment_method', 'cod')
+            ->whereIn('status', ['delivered', 'cancelled', 'refunded'])
+            ->selectRaw("SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END) as delivered, COUNT(*) as closed")
+            ->first();
+
+        $statusCounts = Order::whereBetween('created_at', [$start, $end])
+            ->selectRaw('status, COUNT(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $chartStart = Carbon::today()->subDays($chartDays - 1);
+        $dailyRows = Order::where('created_at', '>=', $chartStart)
+            ->whereIn('status', self::REVENUE_STATUSES)
+            ->selectRaw('DATE(created_at) as day, SUM(total_amount) as revenue')
+            ->groupBy('day')
+            ->pluck('revenue', 'day');
+
+        $daily = [];
+        for ($i = 0; $i < $chartDays; $i++) {
+            $date = $chartStart->copy()->addDays($i);
+            $daily[] = ['date' => $date, 'total' => (float) ($dailyRows[$date->toDateString()] ?? 0)];
+        }
+
+        $count = fn (string ...$statuses): int => (int) collect($statuses)->sum(fn ($s) => $statusCounts[$s] ?? 0);
+
+        return [
+            'revenue' => $current['revenue'],
+            'revenue_change' => $this->percentChange($current['revenue'], $previous['revenue']),
+            'orders' => $current['orders'],
+            'orders_change' => $this->percentChange($current['orders'], $previous['orders']),
+            'average_order' => $current['average'],
+            'average_order_change' => $this->percentChange($current['average'], $previous['average']),
+            'cod_success_rate' => $codClosed && $codClosed->closed > 0 ? (int) round($codClosed->delivered / $codClosed->closed * 100) : null,
+            'returned' => $count('cancelled', 'refunded'),
+            'daily' => $daily,
+            'statuses' => [
+                'new' => $count('pending', 'confirmed'),
+                'processing' => $count('processing'),
+                'shipped' => $count('shipped'),
+                'delivered' => $count('delivered'),
+                'cancelled' => $count('cancelled', 'refunded'),
+            ],
+            'low_stock' => $this->lowStockQuery()
+                ->with('product', 'attributeValues')
+                ->orderByRaw('(stock_quantity - reserved_quantity)')
+                ->limit(5)
+                ->get(),
+        ];
+    }
+
+    /**
+     * @return array{revenue: float, orders: int, average: float}
+     */
+    private function periodTotals(Carbon $from, Carbon $to): array
+    {
+        $row = Order::whereBetween('created_at', [$from, $to])
+            ->whereIn('status', self::REVENUE_STATUSES)
+            ->selectRaw('COUNT(*) as orders, COALESCE(SUM(total_amount), 0) as revenue')
+            ->first();
+
+        $orders = (int) ($row->orders ?? 0);
+        $revenue = (float) ($row->revenue ?? 0);
+
+        return ['revenue' => $revenue, 'orders' => $orders, 'average' => $orders > 0 ? round($revenue / $orders, 2) : 0.0];
+    }
+
+    private function percentChange(float|int $current, float|int $previous): ?float
+    {
+        if ((float) $previous === 0.0) {
+            return null;
+        }
+
+        return round(($current - $previous) / $previous * 100, 1);
+    }
+
+    /**
+     * @return Builder<ProductVariant>
      */
     private function lowStockQuery()
     {

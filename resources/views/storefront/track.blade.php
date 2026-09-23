@@ -1,61 +1,118 @@
 @extends('layouts.app')
-@section('title', 'Track your order')
+@section('title', 'অর্ডার ট্র্যাক করুন')
+@section('hide_header_search', true)
+
+@section('mobile_header')
+    <div class="sm:hidden sticky top-0 z-40 bg-white flex items-center gap-3 px-5 pt-3 pb-3">
+        <a href="{{ route('store.home') }}" class="text-[17px] font-medium" aria-label="হোম">←</a>
+        <div class="text-[20px] font-semibold">অর্ডার ট্র্যাক</div>
+    </div>
+@endsection
 
 @section('content')
-<div class="max-w-[620px] mx-auto px-6 pt-14 pb-20 nf-fade">
-    <h1 class="text-3xl font-semibold tracking-tight mb-2.5 text-center">Track your order</h1>
-    <p class="text-[15px] text-gray-500 text-center mb-8">Enter your order number and the email used at checkout.</p>
+<div class="px-5 sm:px-8 pt-5 sm:pt-[34px] pb-14 max-w-[1100px] nf-fade">
+    <div class="hidden sm:block">
+        <h1 class="font-display text-[38px]">অর্ডার ট্র্যাক করুন</h1>
+        <p class="mt-2.5 text-[16.5px] leading-[1.85] text-cocoa max-w-[58ch]">
+            অ্যাকাউন্ট খোলার দরকার নেই। অর্ডার নম্বর আর যে মোবাইল নম্বর দিয়ে অর্ডার করেছিলেন, সেটি দিলেই অবস্থা দেখতে পারবেন।
+        </p>
+    </div>
 
-    <form method="POST" action="{{ route('store.track.lookup') }}" class="bg-white border border-[#EADBC4] rounded-xl p-6 flex flex-col gap-4">
+    <form method="POST" action="{{ route('store.track.lookup') }}" class="mt-4 sm:mt-[22px] bg-panel rounded-[22px] p-[18px] sm:p-[26px]">
         @csrf
-        <div>
-            <label class="block text-[13px] text-gray-500 mb-1.5">Order number</label>
-            <input name="order_number" value="{{ old('order_number', $prefillOrder ?? '') }}" placeholder="NF-2026-000001" class="w-full h-[44px] border rounded-[7px] px-3.5 font-mono text-sm outline-none focus:border-[#691d2a] {{ $errors->has('order_number') ? 'border-red-400' : 'border-[#EADBC4]' }}">
-            @error('order_number')<div class="text-xs text-red-600 mt-1.5">{{ $message }}</div>@enderror
+        <div class="grid gap-3 sm:gap-3 desk:grid-cols-[1fr_1fr_auto] items-end">
+            <div>
+                <label class="nf-label" for="tr-order">অর্ডার নম্বর</label>
+                <input id="tr-order" name="order_number" value="{{ old('order_number', $prefillOrder) }}" required maxlength="30" placeholder="NFN-1001" class="nf-input uppercase">
+            </div>
+            <div>
+                <label class="nf-label" for="tr-phone">মোবাইল নম্বর</label>
+                <input id="tr-phone" name="phone" value="{{ old('phone', $prefillPhone) }}" required inputmode="tel" placeholder="০১৭১২ ৩৪৫ ৬৭৮" class="nf-input">
+            </div>
+            <button class="bg-espresso text-white rounded-full px-9 h-[52px] text-[15px] font-semibold hover:bg-ink">দেখুন</button>
         </div>
-        <div>
-            <label class="block text-[13px] text-gray-500 mb-1.5">Email</label>
-            <input name="email" value="{{ old('email') }}" placeholder="you@email.com" class="w-full h-[44px] border rounded-[7px] px-3.5 text-sm outline-none focus:border-[#691d2a] {{ $errors->has('email') ? 'border-red-400' : 'border-[#EADBC4]' }}">
-            @error('email')<div class="text-xs text-red-600 mt-1.5">{{ $message }}</div>@enderror
-        </div>
-        <button class="h-[46px] rounded-lg bg-[#691d2a] hover:bg-[#4d141e] text-white text-sm font-semibold">Track order</button>
+        @error('order_number')<div class="mt-3 text-[13.5px] text-rose">{{ $message }}</div>@enderror
+        @error('phone')<div class="mt-2 text-[13.5px] text-rose">{{ $message }}</div>@enderror
+        <div class="mt-3.5 text-[13.5px] text-muted">অর্ডার নম্বরটি আপনার কনফার্মেশন এসএমএসে আছে।</div>
     </form>
 
-    @if(!empty($notFound))
-        <div class="mt-5 bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-lg px-4 py-3 text-center">No order found with that number and email. Check the details and try again.</div>
+    @if($notFound)
+        <div class="mt-5 bg-rose-soft text-rose rounded-[18px] px-5 py-4 text-[14.5px]">
+            এই অর্ডার নম্বর ও মোবাইল নম্বরের সাথে মেলে এমন কোনো অর্ডার পাওয়া যায়নি।
+        </div>
     @endif
 
     @if($order)
-        @php
-            $st = order_status_style($order->status->value);
-            $flow = ['pending'=>'Order placed','confirmed'=>'Confirmed','processing'=>'Processing','shipped'=>'Shipped','delivered'=>'Delivered'];
-            $idx = array_search($order->status->value, array_keys($flow), true);
-        @endphp
-        <div class="mt-7 bg-white border border-[#EADBC4] rounded-xl p-6">
-            <div class="flex items-center justify-between mb-5">
-                <div class="font-mono text-base font-semibold">{{ $order->order_number }}</div>
-                <span class="text-xs font-semibold px-2.5 py-1 rounded-full" style="background:{{ $st['bg'] }};color:{{ $st['color'] }};">{{ $order->status->label() }}</span>
-            </div>
-            @if($order->status->value === 'cancelled')
-                <div class="text-sm text-red-600 mb-4">This order was cancelled.</div>
-            @else
-                <div class="flex flex-col mb-5">
-                    @foreach($flow as $key => $label)
-                        @php $done = $idx !== false && array_search($key, array_keys($flow), true) <= $idx; @endphp
-                        <div class="flex gap-3 items-center py-1.5">
-                            <span class="w-[11px] h-[11px] rounded-full flex-none" style="background:{{ $done ? '#691d2a' : '#E3D8C4' }};"></span>
-                            <span class="text-[13.5px] {{ $done ? 'text-gray-900' : 'text-gray-400' }}">{{ $label }}</span>
-                        </div>
-                    @endforeach
+        @php $pill = $order->status->pill(); @endphp
+        <div class="mt-5 sm:mt-6 grid desk:grid-cols-[1fr_360px] gap-5 desk:gap-6 items-start">
+            <div class="bg-panel rounded-[22px] p-[18px] sm:p-[26px]">
+                <div class="flex justify-between items-baseline flex-wrap gap-2.5">
+                    <div>
+                        <div class="text-[18px] sm:text-[19px] font-semibold">{{ bn_digits($order->order_number) }}</div>
+                        <div class="mt-[3px] text-[14px] text-muted">অর্ডার করা হয়েছে {{ bn_date($order->created_at) }}</div>
+                    </div>
+                    <span class="rounded-full px-4 py-2 text-[13.5px] font-semibold" style="background:{{ $pill['bg'] }};color:{{ $pill['color'] }};">{{ $order->status->customerLabel() }}</span>
                 </div>
-            @endif
-            <div class="border-t border-[#EFE2CE] pt-4 flex flex-col gap-3">
-                @foreach($order->items as $item)
-                    <div class="flex justify-between text-sm"><span class="text-gray-600">{{ $item->product_name }} <span class="text-gray-400">· ×{{ $item->quantity }}</span></span><span class="font-semibold">{{ shop_price($item->line_total) }}</span></div>
-                @endforeach
-                <div class="flex justify-between font-semibold border-t border-[#EFE2CE] pt-3"><span>Total</span><span>{{ shop_price($order->total_amount) }}</span></div>
+
+                <div class="mt-6 sm:mt-[26px]">@include('storefront.partials.order-timeline', ['order' => $order])</div>
+
+                @if($order->status !== \App\Enums\OrderStatus::Cancelled)
+                    <div class="mt-[22px] bg-white rounded-[16px] p-[18px] text-[14.5px] leading-[1.75] text-bark">
+                        @if($order->payment_method === \App\Enums\PaymentMethod::COD)
+                            ডেলিভারির সময় <span class="font-semibold">{{ bn_price($order->total_amount) }}</span> ক্যাশে পরিশোধ করতে হবে। রাইডার আসার আগে ফোন করবেন।
+                        @else
+                            মোট <span class="font-semibold">{{ bn_price($order->total_amount) }}</span> · {{ $order->payment_method->labelBn() }}।
+                        @endif
+                    </div>
+                @endif
+
+                <div class="mt-[18px] flex gap-2.5 flex-wrap">
+                    <a href="tel:{{ preg_replace('/\s+/', '', (string) ($order->rider_phone ?: $general['support_phone'])) }}"
+                       class="flex-1 min-w-[170px] text-center bg-accent-soft text-accent rounded-full py-[15px] text-[14.5px] font-semibold">
+                        {{ $order->rider_phone ? 'রাইডারকে কল করুন' : 'সহায়তায় কল করুন' }}
+                    </a>
+                    @if($order->status->isCustomerCancellable())
+                        <form method="POST" action="{{ route('store.track.cancel', $order->order_number) }}" class="flex-1 min-w-[170px]"
+                              x-data @submit="if (! confirm('অর্ডারটি বাতিল করতে চান?')) $event.preventDefault()">
+                            @csrf
+                            <button class="w-full bg-clay-soft text-espresso rounded-full py-[15px] text-[14.5px] font-semibold">অর্ডার বাতিল করুন</button>
+                        </form>
+                    @endif
+                </div>
+            </div>
+
+            <div class="bg-panel rounded-[22px] p-[18px] sm:p-[26px]">
+                <div class="text-[17px] font-semibold">অর্ডারের পণ্য</div>
+                <div class="mt-4">@include('storefront.partials.order-items', ['order' => $order])</div>
+                <div class="nf-line my-[18px]"></div>
+                <div class="text-[15.5px] font-semibold">ডেলিভারি ঠিকানা</div>
+                <div class="mt-2 text-[14.5px] leading-[1.9] text-cocoa">
+                    {{ $order->shipping_name }}<br>
+                    {{ $order->shipping_address }}<br>
+                    {{ collect([$order->shipping_area, $order->shipping_city, bn_digits($order->shipping_postcode)])->filter()->implode(', ') }}<br>
+                    {{ bn_phone($order->shipping_phone) }}
+                </div>
             </div>
         </div>
     @endif
+
+    {{-- FAQ --}}
+    <div class="mt-8 sm:mt-11 bg-panel rounded-[22px] p-[18px] sm:p-[26px]" x-data="{ open: null }">
+        <div class="text-[17px] font-semibold">সাধারণ প্রশ্ন</div>
+        <div class="mt-3.5 flex flex-col">
+            @foreach([
+                ['অর্ডার নম্বর হারিয়ে ফেলেছি', 'কনফার্মেশন এসএমএসে অর্ডার নম্বর আছে। না পেলে '.bn_digits($general['support_phone']).' নম্বরে কল করুন, মোবাইল নম্বর দিয়ে খুঁজে দেওয়া হবে।'],
+                ['ঠিকানা বদলাতে চাই', 'অর্ডার প্যাক হওয়ার আগে কল করলে ঠিকানা বদলে দেওয়া যায়।'],
+                ['ডেলিভারিতে দেরি হচ্ছে', 'উপরের টাইমলাইনে অবস্থা দেখুন। পথে থাকলে রাইডারের নম্বরে সরাসরি কল করতে পারেন।'],
+            ] as $i => [$question, $answer])
+                @unless($loop->first)<div class="nf-line"></div>@endunless
+                <button type="button" @click="open = open === {{ $i }} ? null : {{ $i }}" class="py-[15px] flex justify-between items-center gap-3 text-[15px] font-medium text-left">
+                    {{ $question }}
+                    <span class="text-muted" x-text="open === {{ $i }} ? '−' : '+'">+</span>
+                </button>
+                <p x-show="open === {{ $i }}" x-collapse x-cloak class="pb-4 text-[14.5px] leading-[1.85] text-cocoa">{{ $answer }}</p>
+            @endforeach
+        </div>
+    </div>
 </div>
 @endsection

@@ -1,3 +1,60 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project
+
+Nafian — a Laravel 12 fashion e-commerce app (BDT currency, Bangladesh courier/COD context) with a public Blade + Alpine.js storefront and a separate admin panel (orders, inventory, POS, expenses, reports, settings). Planning docs live in `docs/` (`PROJECT_BLUEPRINT.md` for the original design, `BUILD_TRACKER.md` for what's done, remaining work, and deploy notes). Local dev runs under XAMPP with MySQL (`nafian_ecommerce`).
+
+## Commands
+
+- Dev (server + queue listener + Vite): `composer run dev`
+- Build assets: `npm run build`
+- Tests (SQLite in-memory, sync queue, array mail — see `phpunit.xml`): `php artisan test --compact`, single test: `php artisan test --compact --filter=test_name`
+- Format: `vendor/bin/pint --dirty --format agent`
+- Seed demo data (admins, attributes, categories, products, coupons): `php artisan migrate:fresh --seed`
+
+## Architecture
+
+- **Two auth guards**: `web` (customers, `User`) and `admin` (`Admin` model, separate table). Admin routes use the `admin.auth` + `admin.perm` middleware aliases registered in `bootstrap/app.php`. Tests authenticate with `actingAs($admin, 'admin')`.
+- **RBAC is enum-based, not spatie/permission**: `UserRole::canManage($area)` decides write access. `EnsureAdminPermission` allows all GET/HEAD requests and gets the area for write requests from the route name segment (`admin.<area>.<action>`). The route name therefore controls authorization, so new admin routes must follow that naming. `variants` counts as `products`. The `@adminCan('area')` Blade directive (in `AppServiceProvider`) only hides UI.
+- **Business logic lives in `app/Services`**. Controllers stay thin and delegate to the services. Services wrap writes in `DB::transaction` and lock variant rows with `lockForUpdate()`.
+- **Inventory model**: stock is tracked per `ProductVariant` (unique color×size) as `stock_quantity` + `reserved_quantity`. `InventoryService` is the only thing that should change these. Every change writes an `InventoryTransaction`.
+  - Checkout → `OrderService::createOrder` snapshots prices into `order_items`, then reserves stock (`StockReservation`, TTL from `config('shop.reservation_ttl_minutes')`). An `InsufficientStockException` rolls back the whole order.
+  - Status transitions are restricted by `OrderStatus::nextStatuses()`. Moving to `Delivered` converts reservations into sales (stock deducted). `Cancelled` releases them.
+  - The scheduled `ExpireStockReservations` job (every minute, in `bootstrap/app.php`) releases expired reservations on pending orders.
+- **POS sales** (`Sale`/`SaleItem`, `PosService`) are separate from online `Order`s and deduct stock right away. `ReportService::getProfitAndLoss` combines order revenue, POS revenue, COGS (variant `cost_price`) and `Expense`s.
+- **Cart** is session-based (`CartService`), keyed by variant id. Coupons are checked by `CouponService`.
+- **Settings** (`SettingsService`) are stored per group (`general`, `pixels`, `courier`) in a `settings` row. They are merged over code defaults, cached forever (`settings.{group}`), and secret fields are encrypted at rest. Always read and write them through the service.
+- **Analytics/pixels** go through `AnalyticsService` (GA4-shaped events: `view_item`, `add_to_cart`, `begin_checkout`, `purchase`, `generate_lead`…). Controllers call it, events queue in the session and `storefront/partials/pixels.blade.php` flushes them via `window.nfTrack()` to Meta/GA4/GTM/TikTok; AJAX endpoints return them as `analytics` for `window.nfFlush()`. With API tokens set, the queued `SendServerAnalyticsEvent` job also sends to Meta CAPI / TikTok Events API / GA4 MP (purchase) using the same event id for dedup.
+- **Media library** (`MediaLibraryService`, `/admin/media`) lists every image: `MediaAsset` library uploads plus product/variant Spatie media, category images and the logo, addressed by keys `media:{id}` / `category:{id}` / `logo`. Image fields offer `window.openMediaPicker()` (Alpine store in `resources/js/media-picker.js`); forms submit keys (`library_images[]`, `variants.*.library_image`, `library_image`, `library_logo`) and the chosen file is **copied** into the target. File inputs with `data-image-editor` get the client-side crop/resize editor (`resources/js/nf-image-editor.js`).
+- Admin write actions are recorded with `ActivityLogger`. Order emails go out through the queued `SendOrderNotification` → `OrderStatusMail`.
+- Global view helpers in `app/Support/helpers.php` (autoloaded): `shop_price()`, `color_hex()`, `order_status_style()`, `brand_logo()`, `estimated_delivery()`. Shop constants are in `config/shop.php`.
+- Views: `resources/views/storefront`, `resources/views/admin`, shared components in `components/ui` and `components/admin`. Product imagery is CSS gradient placeholders, mirroring the prototype in `docs/nafian_prototype`.
+
+## UI conventions (Claude Design import)
+
+The storefront and admin panel follow the Claude Design project `Nafian` (boards: Home, Shop, Product, Checkout, Offers, Track Order, Admin, Admin Manage, Mobile).
+
+- **Language is Bangla** for all customer- and admin-facing copy; numbers render with Bangla digits through `bn_digits()` / `bn_price()` / `bn_date()` / `bn_time()` / `bn_phone()` in `app/Support/helpers.php`. Input is normalised back with `latin_digits()` / `normalize_phone()`.
+- **Palette and type live in `resources/css/app.css`** as theme tokens (`espresso`, `mocha`, `ink`, `cocoa`, `muted`, `sand*`, `panel*`, `canvas`, `line`, `hair`, `accent`, `rose`, `moss`). Use the tokens (`bg-panel`, `text-muted`) rather than new hex values. Fonts: Hind Siliguri, plus `font-display` (Libre Caslon Display) for headings. Shared bits: `.nf-input`, `.nf-label`, `.nf-shadow`, `.nf-switch`, `.nf-rail`, `.nf-line`.
+- **The phone layout is a separate design, not a squeezed desktop one.** Everything below `sm` (640px) is the app-style layout: bottom tab bar, page-specific mobile headers (`@section('mobile_header')`), bottom sheets, sticky action bars, full-screen search. `desk:` (1100px) is the wide storefront/admin breakpoint. Pages opt out of chrome with `@section('no_tabbar')`, `@section('no_footer')`, `@section('hide_header_search')`.
+- **Mobile headers render outside the page's Alpine scope**, so state they share with the page (shop filters, checkout steps) lives in an `Alpine.store()` defined in a `@push('head')` block, not in `x-data`.
+- Product cards come from `storefront/partials/product-card.blade.php` with `$style` = `grid` (default), `rail` or `mini`.
+
+## Storefront behaviour added with the design
+
+- **Delivery zones**: inside vs outside `config('shop.inside_city')`, priced from the `general` settings group (`delivery_inside`, `delivery_outside`, `free_delivery_threshold`). `CartService::getSummary()` and checkout derive the zone from the selected city.
+- **Payment methods** are `cod`, `mobile_banking`, `card` (legacy `online` kept for old rows) and each can be switched off in settings.
+- **Orders** keep `shipping_area`, `shipping_postcode`, `delivery_zone`, `rider_name`, `rider_phone`, plus an `order_status_histories` row per transition — that history drives both the customer tracking timeline (`Order::trackingSteps()`) and the admin order page.
+- **Tracking is order number + phone**; shoppers can cancel while the order is pending/confirmed, and only for orders in their session (`recent_orders`).
+- `CatalogService` powers the shop page (filters, sorts, facets), best sellers, on-sale lists and `hide_when_out_of_stock` visibility. Products also carry fragrance notes, `ingredients`, `usage_instructions` and `is_combo` (the offers page's combo packs).
+- Coupons support a `second_item_percentage` type (COMBO30-style "30% off the 2nd item") and an optional `max_discount_amount` cap; the offers campaign copy/coupon lives in the `campaign` settings group.
+
+## Known gaps
+
+The payment gateway (online payments stay `pending`), courier API calls (Steadfast/Pathao are stubs), and password reset/email verification are not implemented yet. Restock requests and newsletter/campaign subscribers are stored but nothing sends to them yet, and there is no admin screen for either. See `docs/BUILD_TRACKER.md`.
+
 <laravel-boost-guidelines>
 === foundation rules ===
 

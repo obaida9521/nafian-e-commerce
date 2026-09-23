@@ -9,6 +9,8 @@ use Illuminate\Support\Str;
 
 class ProductService
 {
+    public function __construct(private readonly MediaLibraryService $library) {}
+
     /**
      * Create a product with its variants, attributes, categories and images.
      *
@@ -27,12 +29,14 @@ class ProductService
                 'is_featured' => (bool) ($data['is_featured'] ?? false),
                 'meta_title' => $data['meta_title'] ?? null,
                 'meta_description' => $data['meta_description'] ?? null,
+                ...$this->presentationFields($data),
             ]);
 
             $product->categories()->sync($data['categories'] ?? []);
 
             $this->syncVariants($product, $data['variants'] ?? []);
             $this->attachImages($product, $images);
+            $this->attachLibraryImages($product, $data['library_images'] ?? []);
 
             return $product;
         });
@@ -53,6 +57,7 @@ class ProductService
                 'is_featured' => (bool) ($data['is_featured'] ?? false),
                 'meta_title' => $data['meta_title'] ?? null,
                 'meta_description' => $data['meta_description'] ?? null,
+                ...$this->presentationFields($data),
             ]);
 
             $product->categories()->sync($data['categories'] ?? []);
@@ -60,9 +65,30 @@ class ProductService
             $this->syncVariants($product, $data['variants'] ?? []);
             $this->removeImages($product, $data['remove_images'] ?? []);
             $this->attachImages($product, $images);
+            $this->attachLibraryImages($product, $data['library_images'] ?? []);
 
             return $product;
         });
+    }
+
+    /**
+     * Fragrance notes, usage copy and merchandising toggles shared by create and update.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function presentationFields(array $data): array
+    {
+        return [
+            'notes_top' => $data['notes_top'] ?? null,
+            'notes_heart' => $data['notes_heart'] ?? null,
+            'notes_base' => $data['notes_base'] ?? null,
+            'ingredients' => $data['ingredients'] ?? null,
+            'usage_instructions' => $data['usage_instructions'] ?? null,
+            'video_url' => $data['video_url'] ?? null,
+            'is_combo' => (bool) ($data['is_combo'] ?? false),
+            'hide_when_out_of_stock' => (bool) ($data['hide_when_out_of_stock'] ?? false),
+        ];
     }
 
     /**
@@ -101,6 +127,14 @@ class ProductService
 
             $keptIds[] = $variant->id;
 
+            if (($row['image'] ?? null) instanceof UploadedFile) {
+                $variant->addMedia($row['image'])->toMediaCollection('image');
+            } elseif (! empty($row['library_image'])) {
+                $this->library->copyToCollection($row['library_image'], $variant, 'image');
+            } elseif (! empty($row['remove_image'])) {
+                $variant->clearMediaCollection('image');
+            }
+
             foreach ($row['attributes'] ?? [] as $attr) {
                 if (empty($attr['attribute_id']) || ($attr['value'] ?? '') === '') {
                     continue;
@@ -126,6 +160,18 @@ class ProductService
             if ($image instanceof UploadedFile) {
                 $product->addMedia($image)->toMediaCollection('images');
             }
+        }
+    }
+
+    /**
+     * Copy images picked from the media library into the product gallery.
+     *
+     * @param  array<int, string>  $keys
+     */
+    private function attachLibraryImages(Product $product, array $keys): void
+    {
+        foreach (array_unique($keys) as $key) {
+            $this->library->copyToCollection($key, $product, 'images');
         }
     }
 

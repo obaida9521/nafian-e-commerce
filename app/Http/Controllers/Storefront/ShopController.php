@@ -4,67 +4,70 @@ namespace App\Http\Controllers\Storefront;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
-use App\Models\Product;
+use App\Services\AnalyticsService;
+use App\Services\CatalogService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ShopController extends Controller
 {
+    public function __construct(
+        private CatalogService $catalog,
+        private AnalyticsService $analytics,
+    ) {}
+
     public function index(Request $request, ?Category $category = null): View
     {
+        $validated = $request->validate([
+            'q' => ['nullable', 'string', 'max:100'],
+            'types' => ['nullable', 'array'],
+            'types.*' => ['string', 'max:100'],
+            'colors' => ['nullable', 'array'],
+            'colors.*' => ['string', 'max:100'],
+            'sizes' => ['nullable', 'array'],
+            'sizes.*' => ['string', 'max:100'],
+            'min' => ['nullable', 'integer', 'min:0'],
+            'max' => ['nullable', 'integer', 'min:0'],
+            'sort' => ['nullable', Rule::in(CatalogService::SORTS)],
+        ]);
+
+        $filters = [
+            'q' => $validated['q'] ?? null,
+            'types' => array_values(array_filter($validated['types'] ?? [])),
+            'colors' => array_values(array_filter($validated['colors'] ?? [])),
+            'sizes' => array_values(array_filter($validated['sizes'] ?? [])),
+            'min' => isset($validated['min']) ? (int) $validated['min'] : null,
+            'max' => isset($validated['max']) ? (int) $validated['max'] : null,
+            'in_stock' => $request->boolean('in_stock'),
+            'top_rated' => $request->boolean('top_rated'),
+            'on_sale' => $request->boolean('on_sale'),
+            'sort' => $validated['sort'] ?? 'best_selling',
+        ];
+
         $categories = Category::query()
             ->active()
-            ->withCount('products')
+            ->withCount(['products' => fn ($q) => $q->active()])
             ->orderBy('sort_order')
             ->get();
 
-        $sort = $request->string('sort', 'Featured')->toString();
-        $maxPrice = (int) $request->integer('max', 500);
-        $colors = array_filter((array) $request->input('colors', []));
+        $result = $this->catalog->search($filters, $category, (int) config('shop.per_page'));
 
-        $query = Product::query()
-            ->active()
-            ->with(['categories', 'variants.attributeValues.attribute', 'media'])
-            ->whereHas('variants', fn ($q) => $q->where('price', '<=', $maxPrice));
+        $title = $category?->name ?? __('সব পণ্য');
 
-        if ($category) {
-            $query->whereHas('categories', fn ($q) => $q->where('categories.id', $category->id));
+        if ($filters['q'] && $request->integer('page', 1) === 1) {
+            $this->analytics->search($filters['q']);
         }
-
-        if ($colors !== []) {
-            $query->whereHas('variants.attributeValues', function ($q) use ($colors): void {
-                $q->whereHas('attribute', fn ($a) => $a->where('slug', 'color'))
-                    ->whereIn('value', $colors);
-            });
-        }
-
-        $products = $query->get();
-
-        $products = match ($sort) {
-            'Price: Low to High' => $products->sortBy(fn (Product $p) => $p->variants->min('price'))->values(),
-            'Price: High to Low' => $products->sortByDesc(fn (Product $p) => $p->variants->min('price'))->values(),
-            'Top Rated' => $products->sortByDesc('rating')->values(),
-            default => $products->sortByDesc('is_featured')->values(),
-        };
-
-        $colorOptions = collect(config('shop.colors'))
-            ->filter(fn ($hex, $name) => Product::active()
-                ->whereHas('variants.attributeValues', fn ($q) => $q
-                    ->whereHas('attribute', fn ($a) => $a->where('slug', 'color'))
-                    ->where('value', $name))
-                ->exists())
-            ->keys()
-            ->all();
+        $this->analytics->viewItemList($result['products']->items(), $filters['q'] ? 'search' : $title);
 
         return view('storefront.plp', [
-            'title' => $category?->name ?? 'All products',
+            'title' => $title,
             'activeCategory' => $category,
             'categories' => $categories,
-            'products' => $products,
-            'sort' => $sort,
-            'maxPrice' => $maxPrice,
-            'selectedColors' => $colors,
-            'colorOptions' => $colorOptions,
+            'products' => $result['products'],
+            'variantCount' => $result['variant_count'],
+            'filters' => $filters,
+            'facets' => $this->catalog->facets($filters, $category),
         ]);
     }
 }

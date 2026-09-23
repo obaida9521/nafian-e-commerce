@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\AnalyticsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -41,7 +42,7 @@ class CustomerAuthController extends Controller
         return view('storefront.auth.register');
     }
 
-    public function register(Request $request): RedirectResponse
+    public function register(Request $request, AnalyticsService $analytics): RedirectResponse
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100'],
@@ -60,6 +61,7 @@ class CustomerAuthController extends Controller
 
         Auth::guard('web')->login($user);
         $request->session()->regenerate();
+        $analytics->signUp($user->email, $user->phone, $user->id);
 
         return redirect()->route('store.account.orders');
     }

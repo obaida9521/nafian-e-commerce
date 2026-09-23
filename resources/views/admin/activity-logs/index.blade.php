@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Activity Logs')
+@section('title', 'অ্যাক্টিভিটি লগ')
 
 @section('content')
 <div class="space-y-5">
@@ -15,7 +15,7 @@
                 <option value="{{ $type }}" @selected(request('resource_type')===$type)>{{ $type }}</option>
             @endforeach
         </select>
-        <button class="rounded-lg bg-wine-700 px-4 py-2 text-sm font-medium text-cream-100 hover:bg-wine-800">Filter</button>
+        <button class="inline-flex items-center gap-1.5 rounded-lg bg-wine-700 px-4 py-2 text-sm font-medium text-cream-100 hover:bg-wine-800"><x-ui.icon name="filter" :size="15" />Filter</button>
     </form>
 
     <div class="rounded-xl bg-white border border-cream-300/60 shadow-sm overflow-hidden">

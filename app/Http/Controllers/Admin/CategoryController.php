@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Services\ActivityLogger;
+use App\Services\MediaLibraryService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -41,7 +42,7 @@ class CategoryController extends Controller
             ($category->show_on_home ? 'Enabled' : 'Disabled')." {$category->name} on homepage",
         );
 
-        return back()->with('success', $category->show_on_home ? 'Shown on homepage.' : 'Hidden from homepage.');
+        return back()->with('success', $category->show_on_home ? 'হোমপেজে দেখানো হচ্ছে।' : 'হোমপেজ থেকে লুকানো হয়েছে।');
     }
 
     public function create(): View
@@ -65,7 +66,7 @@ class CategoryController extends Controller
             "Created category {$category->name}",
         );
 
-        return redirect()->route('admin.categories.index')->with('success', 'Category created.');
+        return redirect()->route('admin.categories.index')->with('success', 'ক্যাটাগরি তৈরি হয়েছে।');
     }
 
     public function edit(Category $category): View
@@ -89,7 +90,7 @@ class CategoryController extends Controller
             "Updated category {$category->name}",
         );
 
-        return redirect()->route('admin.categories.index')->with('success', 'Category updated.');
+        return redirect()->route('admin.categories.index')->with('success', 'ক্যাটাগরি আপডেট হয়েছে।');
     }
 
     public function destroy(Category $category): RedirectResponse
@@ -104,7 +105,7 @@ class CategoryController extends Controller
             "Deleted category {$category->name}",
         );
 
-        return redirect()->route('admin.categories.index')->with('success', 'Category deleted.');
+        return redirect()->route('admin.categories.index')->with('success', 'ক্যাটাগরি মুছে ফেলা হয়েছে।');
     }
 
     /**
@@ -123,9 +124,10 @@ class CategoryController extends Controller
             'show_on_home' => ['nullable', 'boolean'],
             'image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:1024'],
             'remove_image' => ['nullable', 'boolean'],
+            'library_image' => ['nullable', 'string', 'regex:'.MediaLibraryService::KEY_PATTERN],
         ]);
 
-        unset($validated['image'], $validated['remove_image']);
+        unset($validated['image'], $validated['remove_image'], $validated['library_image']);
 
         $validated['slug'] = Str::slug($validated['name']);
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
@@ -137,6 +139,11 @@ class CategoryController extends Controller
                 Storage::disk('public')->delete($category->image_path);
             }
             $validated['image_path'] = $request->file('image')->store('categories', 'public');
+        } elseif ($request->filled('library_image') && ($copied = app(MediaLibraryService::class)->copyToDirectory($request->string('library_image')->toString(), 'categories'))) {
+            if ($category?->image_path) {
+                Storage::disk('public')->delete($category->image_path);
+            }
+            $validated['image_path'] = $copied;
         } elseif ($request->boolean('remove_image')) {
             if ($category?->image_path) {
                 Storage::disk('public')->delete($category->image_path);

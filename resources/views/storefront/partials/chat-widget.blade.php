@@ -4,7 +4,7 @@
     $messenger = trim((string) ($general['messenger'] ?? ''));
 @endphp
 @if($waNumber || $messenger)
-    <div class="fixed bottom-5 right-5 z-[70] flex flex-col gap-3" x-data="{ hover: false }">
+    <div class="fixed bottom-[100px] sm:bottom-5 right-4 sm:right-5 z-[45] flex flex-col gap-3" x-data="{ hover: false }">
         @if($messenger)
             <a href="https://m.me/{{ ltrim($messenger, '@/') }}" target="_blank" rel="noopener" aria-label="Chat on Messenger"
                class="w-12 h-12 rounded-full shadow-lg grid place-items-center text-white transition hover:scale-105"

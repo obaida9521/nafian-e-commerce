@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'meta' => [
+        'graph_version' => env('META_GRAPH_VERSION', 'v23.0'),
+    ],
+
 ];

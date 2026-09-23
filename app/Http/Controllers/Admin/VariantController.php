@@ -33,6 +33,6 @@ class VariantController extends Controller
         $productId = $variant->product_id;
         $variant->delete();
 
-        return redirect()->route('admin.products.edit', $productId)->with('success', 'Variant removed.');
+        return redirect()->route('admin.products.edit', $productId)->with('success', 'ভ্যারিয়েন্ট সরানো হয়েছে।');
     }
 }

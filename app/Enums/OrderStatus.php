@@ -26,6 +26,63 @@ enum OrderStatus: string
     }
 
     /**
+     * Admin panel (Bangla) label.
+     */
+    public function labelBn(): string
+    {
+        return match ($this) {
+            self::Pending => 'নতুন',
+            self::Confirmed => 'নিশ্চিত',
+            self::Processing => 'প্রসেসিং',
+            self::Shipped => 'শিপড',
+            self::Delivered => 'ডেলিভারড',
+            self::Cancelled => 'বাতিল',
+            self::Refunded => 'রিফান্ড',
+        };
+    }
+
+    /**
+     * Customer-facing (Bangla) label used on tracking and confirmation.
+     */
+    public function customerLabel(): string
+    {
+        return match ($this) {
+            self::Pending => 'অর্ডার গ্রহণ করা হয়েছে',
+            self::Confirmed => 'অর্ডার নিশ্চিত হয়েছে',
+            self::Processing => 'প্যাকিং চলছে',
+            self::Shipped => 'পথে আছে',
+            self::Delivered => 'ডেলিভারড',
+            self::Cancelled => 'বাতিল',
+            self::Refunded => 'রিফান্ড হয়েছে',
+        };
+    }
+
+    /**
+     * Pill colours from the design palette.
+     *
+     * @return array{bg: string, color: string}
+     */
+    public function pill(): array
+    {
+        [$bg, $color] = match ($this) {
+            self::Pending, self::Confirmed => ['#EDF2F7', '#3C5A78'],
+            self::Processing, self::Shipped => ['#F3EFEC', '#3E3532'],
+            self::Delivered => ['#F1F4F1', '#3F5A42'],
+            self::Cancelled, self::Refunded => ['#F7EFEE', '#8A5A52'],
+        };
+
+        return ['bg' => $bg, 'color' => $color];
+    }
+
+    /**
+     * Whether a shopper may still cancel the order themselves.
+     */
+    public function isCustomerCancellable(): bool
+    {
+        return in_array($this, [self::Pending, self::Confirmed], true);
+    }
+
+    /**
      * Tailwind color token used by the status-badge component.
      */
     public function color(): string

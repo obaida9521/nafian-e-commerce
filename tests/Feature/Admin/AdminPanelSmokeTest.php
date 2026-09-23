@@ -142,9 +142,9 @@ class AdminPanelSmokeTest extends TestCase
             ->get(route('admin.orders.show', $order))
             ->assertOk()
             ->assertSee($order->order_number)
-            ->assertSee('Mark as Confirmed')
-            ->assertSee('Cancel order')
-            ->assertSee('Timeline');
+            ->assertSee('নিশ্চিত হিসেবে চিহ্নিত করুন')
+            ->assertSee('অর্ডার বাতিল করুন')
+            ->assertSee('অর্ডারের ইতিহাস');
     }
 
     public function test_admin_can_advance_order_status_from_detail(): void
@@ -272,7 +272,7 @@ class AdminPanelSmokeTest extends TestCase
         $this->actingAs($this->admin, 'admin')
             ->get(route('admin.coupons.index'))
             ->assertOk()
-            ->assertSee('Add coupon')
+            ->assertSee('নতুন কুপন')
             ->assertSee('WELCOME10');
     }
 

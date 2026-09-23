@@ -67,7 +67,7 @@ class AdminAuthTest extends TestCase
         $this->actingAs($admin, 'admin')
             ->get(route('admin.dashboard'))
             ->assertOk()
-            ->assertSee('Dashboard');
+            ->assertSee('ড্যাশবোর্ড');
     }
 
     public function test_admin_can_log_out(): void

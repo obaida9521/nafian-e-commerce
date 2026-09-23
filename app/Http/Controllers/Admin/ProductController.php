@@ -56,7 +56,7 @@ class ProductController extends Controller
             ($product->is_featured ? 'Marked' : 'Unmarked')." {$product->name} as featured",
         );
 
-        return back()->with('success', $product->is_featured ? 'Marked as featured.' : 'Removed from featured.');
+        return back()->with('success', $product->is_featured ? 'ফিচার্ড করা হয়েছে।' : 'ফিচার্ড থেকে সরানো হয়েছে।');
     }
 
     public function create(): View
@@ -84,7 +84,7 @@ class ProductController extends Controller
             "Created product {$product->name}",
         );
 
-        return redirect()->route('admin.products.index')->with('success', 'Product created.');
+        return redirect()->route('admin.products.index')->with('success', 'পণ্য তৈরি হয়েছে।');
     }
 
     public function show(Product $product): RedirectResponse
@@ -120,7 +120,7 @@ class ProductController extends Controller
             "Updated product {$product->name}",
         );
 
-        return redirect()->route('admin.products.index')->with('success', 'Product updated.');
+        return redirect()->route('admin.products.index')->with('success', 'পণ্য আপডেট হয়েছে।');
     }
 
     public function destroy(Product $product): RedirectResponse
@@ -135,6 +135,6 @@ class ProductController extends Controller
             "Deleted product {$product->name}",
         );
 
-        return redirect()->route('admin.products.index')->with('success', 'Product deleted.');
+        return redirect()->route('admin.products.index')->with('success', 'পণ্য মুছে ফেলা হয়েছে।');
     }
 }

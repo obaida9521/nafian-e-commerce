@@ -2,17 +2,21 @@
 
 namespace App\Models;
 
+use Database\Factories\ProductVariantFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
-class ProductVariant extends Model
+class ProductVariant extends Model implements HasMedia
 {
-    /** @use HasFactory<\Database\Factories\ProductVariantFactory> */
-    use HasFactory, SoftDeletes;
+    /** @use HasFactory<ProductVariantFactory> */
+    use HasFactory, InteractsWithMedia, SoftDeletes;
 
     /**
      * @var list<string>
@@ -45,6 +49,22 @@ class ProductVariant extends Model
             'is_active' => 'boolean',
             'sort_order' => 'integer',
         ];
+    }
+
+    /**
+     * One photo per variant (e.g. the 50 ml bottle); the product page switches to it on selection.
+     */
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('image')->singleFile()->useDisk('public');
+    }
+
+    public function registerMediaConversions(?Media $media = null): void
+    {
+        $this->addMediaConversion('thumb')
+            ->width(300)
+            ->height(300)
+            ->nonQueued();
     }
 
     /**
@@ -82,6 +102,28 @@ class ProductVariant extends Model
     public function getAvailableQuantityAttribute(): int
     {
         return $this->stock_quantity - $this->reserved_quantity;
+    }
+
+    /**
+     * Value of one attribute on this variant, e.g. attributeValue('size') → "12 ml".
+     */
+    public function attributeValue(string $slug): ?string
+    {
+        return $this->attributeValues->first(fn ($av) => $av->attribute?->slug === $slug)?->value;
+    }
+
+    /**
+     * Short label for listings: size when present, otherwise every attribute value.
+     */
+    public function shortLabel(): string
+    {
+        $size = $this->attributeValue('size');
+
+        if ($size !== null && $size !== 'One Size') {
+            return $size;
+        }
+
+        return $this->attributeValues->first()?->value ?? $this->sku;
     }
 
     public function getDisplayNameAttribute(): string

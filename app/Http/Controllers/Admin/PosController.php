@@ -44,7 +44,7 @@ class PosController extends Controller
 
         return redirect()
             ->route('admin.pos.show', $sale)
-            ->with('success', "Sale {$sale->sale_number} completed.");
+            ->with('success', "বিক্রি {$sale->sale_number} সম্পন্ন হয়েছে।");
     }
 
     public function show(Sale $sale): View

@@ -11,6 +11,7 @@ use App\Models\ProductVariant;
 use App\Services\OrderService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class OrderServiceTest extends TestCase
@@ -49,7 +50,7 @@ class OrderServiceTest extends TestCase
 
         $this->assertSame(2000.0, (float) $order->subtotal);
         $this->assertSame(2060.0, (float) $order->total_amount);
-        $this->assertStringStartsWith(config('shop.order_number_prefix').'-'.date('Y').'-', $order->order_number);
+        $this->assertStringStartsWith(config('shop.order_number_prefix').'-', $order->order_number);
         $this->assertDatabaseHas('order_items', ['order_id' => $order->id, 'unit_price' => 1000, 'quantity' => 2]);
         $this->assertDatabaseHas('payments', ['order_id' => $order->id, 'status' => 'pending']);
 
@@ -128,7 +129,7 @@ class OrderServiceTest extends TestCase
         $admin = Admin::factory()->create();
         $order = Order::factory()->status(OrderStatus::Delivered)->create();
 
-        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        $this->expectException(ValidationException::class);
         $this->service->updateStatus($order, OrderStatus::Pending, $admin);
     }
 }

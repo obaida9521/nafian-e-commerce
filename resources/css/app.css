@@ -5,35 +5,182 @@
 @source '../**/*.blade.php';
 @source '../**/*.js';
 
+/* Phone chrome: the tab bar's height, so page spacers and sticky bars can sit above it. */
+:root {
+    --nf-tabbar-h: calc(64px + env(safe-area-inset-bottom));
+}
+
 @theme {
-    --font-sans: 'Inter', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
-        'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    /* Storefront desktop layout (sidebar + 3-column grid) kicks in here. */
+    --breakpoint-desk: 68.75rem;
 
-    /* Brand palette — wine + cream */
-    --color-wine-50: #fbeef0;
-    --color-wine-100: #f5d5da;
-    --color-wine-200: #e9aab4;
-    --color-wine-300: #db7d8d;
-    --color-wine-400: #c4566a;
-    --color-wine-500: #a13a4d;
-    --color-wine-600: #832c3d;
-    --color-wine-700: #691d2a;
-    --color-wine-800: #551722;
-    --color-wine-900: #43121b;
+    --font-sans: 'Hind Siliguri', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+    --font-display: 'Libre Caslon Display', ui-serif, Georgia, serif;
 
-    --color-cream-50: #fffaf3;
-    --color-cream-100: #fff2e3;
-    --color-cream-200: #fbe6cd;
-    --color-cream-300: #f5d4ad;
+    /* Nafian palette — espresso + warm neutrals, slate-blue accent (from the Claude Design files). */
+    --color-ink: #241C1A;
+    --color-espresso: #3B2F2D;
+    --color-mocha: #2A2220;
+    --color-cocoa: #5C524E;
+    --color-bark: #3E3532;
+    --color-muted: #6B605B;
+    --color-dust: #8E827C;
+    --color-sand: #F6F3F1;
+    --color-sand-2: #F2EFED;
+    --color-sand-3: #F4F1EF;
+    --color-panel: #F9F7F5;
+    --color-panel-2: #F7F5F3;
+    --color-canvas: #FAF9F8;
+    --color-line: #E9E4E0;
+    --color-hair: #F0ECE9;
+    --color-accent: #3C5A78;
+    --color-accent-soft: #EDF2F7;
+    --color-sky: #A8C2DA;
+    --color-rose: #8A5A52;
+    --color-rose-soft: #F7EFEE;
+    --color-moss: #3F5A42;
+    --color-moss-soft: #F1F4F1;
+    --color-clay-soft: #F3EFEC;
 
-    --color-brand: #691d2a;
-    --color-brand-bg: #fff2e3;
+    /* Legacy scales kept for untouched screens, re-pointed at the new palette. */
+    --color-wine-50: #f6f3f1;
+    --color-wine-100: #ede6e1;
+    --color-wine-200: #d9cdc6;
+    --color-wine-300: #bba99f;
+    --color-wine-400: #8e827c;
+    --color-wine-500: #6b605b;
+    --color-wine-600: #5a4842;
+    --color-wine-700: #3b2f2d;
+    --color-wine-800: #2a2220;
+    --color-wine-900: #241c1a;
+
+    --color-cream-50: #fcfbfa;
+    --color-cream-100: #faf9f8;
+    --color-cream-200: #f3efec;
+    --color-cream-300: #e9e4e0;
+
+    --color-brand: #3b2f2d;
+    --color-brand-bg: #ffffff;
 }
 
 @layer base {
     body {
-        background-color: var(--color-brand-bg);
-        color: #2b2b2b;
+        background-color: #ffffff;
+        color: var(--color-ink);
+        font-family: var(--font-sans);
+        -webkit-font-smoothing: antialiased;
+    }
+
+    a {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    button {
+        cursor: pointer;
+    }
+}
+
+@layer components {
+    .nf-shadow {
+        box-shadow: 0 10px 34px -22px rgba(36, 28, 26, 0.55);
+    }
+
+    .nf-shadow-soft {
+        box-shadow: 0 8px 28px -22px rgba(36, 28, 26, 0.5);
+    }
+
+    .nf-label {
+        display: block;
+        margin-bottom: 7px;
+        font-size: 13.5px;
+        font-weight: 500;
+        color: var(--color-muted);
+    }
+
+    .nf-input {
+        width: 100%;
+        background: #fff;
+        border-radius: 14px;
+        padding: 15px 16px;
+        font-size: 15px;
+        color: var(--color-ink);
+        outline: none;
+        border: 0;
+        transition: box-shadow 0.15s;
+    }
+
+    .nf-input::placeholder {
+        color: var(--color-muted);
+    }
+
+    .nf-input:focus {
+        box-shadow: 0 0 0 2px var(--color-espresso) inset;
+    }
+
+    .nf-input-soft {
+        background: var(--color-canvas);
+    }
+
+    select.nf-input {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%233B2F2D' stroke-width='1.6'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 16px center;
+        padding-right: 40px;
+    }
+
+    .nf-line {
+        height: 1px;
+        background: var(--color-hair);
+    }
+
+    .nf-rail {
+        display: flex;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: none;
+    }
+
+    .nf-rail::-webkit-scrollbar {
+        display: none;
+    }
+
+    .nf-rail > * {
+        scroll-snap-align: start;
+    }
+
+    .nf-switch {
+        width: 44px;
+        height: 26px;
+        border-radius: 999px;
+        background: var(--color-line);
+        display: flex;
+        align-items: center;
+        padding: 3px;
+        transition: background 0.2s;
+        flex: none;
+    }
+
+    .nf-switch > span {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #fff;
+        transition: transform 0.2s;
+    }
+
+    input:checked + .nf-switch {
+        background: var(--color-espresso);
+    }
+
+    input:checked + .nf-switch > span {
+        transform: translateX(18px);
+    }
+
+    input:focus-visible + .nf-switch {
+        outline: 2px solid var(--color-accent);
+        outline-offset: 2px;
     }
 }
 
@@ -41,8 +188,493 @@
     .scrollbar-thin {
         scrollbar-width: thin;
     }
+
+    .pb-safe {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+}
+
+@keyframes nf-drift {
+    0% {
+        transform: scale(1.06) translate3d(0, 0, 0);
+    }
+    100% {
+        transform: scale(1.16) translate3d(-1.5%, -1.5%, 0);
+    }
+}
+
+.nf-drift {
+    animation: nf-drift 18s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nf-drift {
+        animation: none;
+    }
 }
 
 [x-cloak] {
     display: none !important;
+}
+
+/* ── Custom dropdowns (resources/js/nf-select.js) ─────────────────────────── */
+.nf-select-native {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip-path: inset(50%) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+.nf-select-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+    text-align: left;
+    cursor: pointer;
+    user-select: none;
+    background-image: none;
+}
+
+.nf-select-trigger.nf-input {
+    padding-right: 16px;
+}
+
+.nf-select-trigger:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.nf-select-trigger:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+}
+
+.nf-select-trigger.is-placeholder .nf-select-label {
+    color: var(--color-muted);
+}
+
+.nf-select-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nf-select-chevron {
+    flex: none;
+    color: var(--color-espresso);
+    transition: transform 0.2s ease;
+}
+
+.nf-select-trigger[aria-expanded='true'] .nf-select-chevron {
+    transform: rotate(180deg);
+}
+
+.nf-select-menu {
+    position: fixed;
+    z-index: 120;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line) transparent;
+    padding: 6px;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 0 0 1px rgba(36, 28, 26, 0.06), 0 22px 48px -18px rgba(36, 28, 26, 0.45);
+    font-family: inherit;
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+    transform-origin: top center;
+    transition: opacity 0.14s ease, transform 0.14s ease;
+}
+
+.nf-select-menu.is-up {
+    transform-origin: bottom center;
+    transform: translateY(4px) scale(0.98);
+}
+
+.nf-select-menu.is-open {
+    opacity: 1;
+    transform: none;
+}
+
+.nf-select-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 11px;
+    font-size: 14.5px;
+    line-height: 1.35;
+    color: var(--color-ink);
+    cursor: pointer;
+}
+
+.nf-select-option svg {
+    flex: none;
+    color: var(--color-espresso);
+    visibility: hidden;
+}
+
+.nf-select-option.is-active {
+    background: var(--color-sand);
+}
+
+.nf-select-option.is-selected {
+    font-weight: 600;
+    color: var(--color-espresso);
+}
+
+.nf-select-option.is-selected svg {
+    visibility: visible;
+}
+
+.nf-select-option.is-placeholder {
+    color: var(--color-muted);
+}
+
+.nf-select-option.is-disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.nf-select-group {
+    padding: 10px 12px 4px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--color-muted);
+}
+
+/* Phones: bottom sheet */
+.nf-select-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 119;
+    background: rgba(26, 20, 19, 0.46);
+    animation: nfSelectFade 0.18s ease;
+}
+
+.nf-select-menu.is-sheet {
+    inset: auto 0 0 0;
+    max-height: 72vh;
+    padding: 12px 14px max(18px, env(safe-area-inset-bottom));
+    border-radius: 26px 26px 0 0;
+    transform: translateY(100%);
+    transition: transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+    opacity: 1;
+}
+
+.nf-select-menu.is-sheet.is-open {
+    transform: none;
+}
+
+.nf-select-menu.is-sheet .nf-select-option {
+    padding: 14px 12px;
+    font-size: 15.5px;
+    border-radius: 14px;
+}
+
+.nf-select-grip {
+    width: 40px;
+    height: 4px;
+    margin: 0 auto 12px;
+    border-radius: 4px;
+    background: #e2dbd6;
+}
+
+.nf-select-title {
+    padding: 0 12px 8px;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-ink);
+}
+
+@keyframes nfSelectFade {
+    from {
+        opacity: 0;
+    }
+}
+
+/* ── Image crop / resize editor (resources/js/nf-image-editor.js) ─────────── */
+.nf-imged-lock,
+.nf-imged-lock body {
+    overflow: hidden;
+}
+
+.nf-imged {
+    position: fixed;
+    inset: 0;
+    z-index: 130;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(26, 20, 19, 0.6);
+    opacity: 0;
+    transition: opacity 0.18s ease;
+    font-family: 'Hind Siliguri', ui-sans-serif, sans-serif;
+}
+
+.nf-imged.is-open {
+    opacity: 1;
+}
+
+.nf-imged-panel {
+    display: flex;
+    flex-direction: column;
+    width: min(760px, 100%);
+    max-height: calc(100vh - 32px);
+    background: #fff;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.6);
+}
+
+.nf-imged-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 20px 12px;
+}
+
+.nf-imged-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--color-ink);
+}
+
+.nf-imged-title span {
+    color: var(--color-muted);
+    font-weight: 500;
+}
+
+.nf-imged-file {
+    margin-top: 2px;
+    font-size: 12.5px;
+    color: var(--color-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 60vw;
+}
+
+.nf-imged-x {
+    width: 34px;
+    height: 34px;
+    flex: none;
+    border-radius: 999px;
+    background: var(--color-sand);
+    color: var(--color-espresso);
+}
+
+.nf-imged-stage {
+    flex: 1 1 auto;
+    min-height: 220px;
+    height: min(58vh, 520px);
+    display: grid;
+    place-items: center;
+    background: repeating-conic-gradient(#efebe8 0% 25%, #f8f6f4 0% 50%) 50% / 18px 18px;
+    overflow: hidden;
+}
+
+.nf-imged-canvas-wrap {
+    position: relative;
+    touch-action: none;
+    user-select: none;
+}
+
+.nf-imged-canvas-wrap canvas {
+    display: block;
+}
+
+.nf-imged-crop {
+    position: absolute;
+    cursor: move;
+    touch-action: none;
+    outline: 2px solid #fff;
+    box-shadow: 0 0 0 9999px rgba(26, 20, 19, 0.55);
+}
+
+.nf-imged-grid {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    /* Rule-of-thirds guides: a line every third, the first hidden under the outline. */
+    background-image:
+        linear-gradient(to right, rgba(255, 255, 255, 0.5) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.5) 1px, transparent 1px);
+    background-size: 33.3333% 33.3333%;
+}
+
+.nf-imged-handle {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    touch-action: none;
+}
+
+.nf-imged-handle.is-nw { left: -11px; top: -11px; cursor: nwse-resize; }
+.nf-imged-handle.is-ne { right: -11px; top: -11px; cursor: nesw-resize; }
+.nf-imged-handle.is-sw { left: -11px; bottom: -11px; cursor: nesw-resize; }
+.nf-imged-handle.is-se { right: -11px; bottom: -11px; cursor: nwse-resize; }
+
+.nf-imged-tools {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 20px 4px;
+}
+
+.nf-imged-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.nf-imged-label {
+    width: 104px;
+    flex: none;
+    font-size: 13px;
+    color: var(--color-muted);
+}
+
+.nf-imged-chips {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.nf-imged-chip {
+    flex: none;
+    padding: 7px 13px;
+    border-radius: 999px;
+    background: var(--color-sand);
+    color: var(--color-cocoa);
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.nf-imged-chip.is-on {
+    background: var(--color-espresso);
+    color: #fff;
+}
+
+.nf-imged-out {
+    margin-left: auto;
+    font-size: 12.5px;
+    color: var(--color-muted);
+}
+
+.nf-imged-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding: 14px 20px max(18px, env(safe-area-inset-bottom));
+}
+
+.nf-imged-btn {
+    height: 44px;
+    padding: 0 22px;
+    border-radius: 999px;
+    font-size: 14.5px;
+    font-weight: 600;
+}
+
+.nf-imged-btn.is-ghost {
+    background: var(--color-sand);
+    color: var(--color-espresso);
+}
+
+.nf-imged-btn.is-primary {
+    background: var(--color-espresso);
+    color: #fff;
+}
+
+@media (max-width: 639px) {
+    .nf-imged {
+        padding: 0;
+        align-items: flex-end;
+    }
+
+    .nf-imged-panel {
+        border-radius: 22px 22px 0 0;
+        max-height: 100vh;
+    }
+
+    .nf-imged-stage {
+        height: 48vh;
+    }
+
+    .nf-imged-label {
+        width: 100%;
+    }
+
+    .nf-imged-actions .nf-imged-btn {
+        flex: 1;
+    }
+}
+
+/* ── Admin snackbars (components/admin/toasts.blade.php) ─────────────────── */
+.nf-toast { --toast: var(--color-accent); --toast-soft: var(--color-accent-soft); }
+.nf-toast.is-success { --toast: #16a34a; --toast-soft: #dcfce7; }
+.nf-toast.is-error { --toast: #dc2626; --toast-soft: #fee2e2; }
+.nf-toast.is-warning { --toast: #d97706; --toast-soft: #fef3c7; }
+
+.nf-toast::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: var(--toast);
+}
+
+.nf-toast-icon {
+    color: var(--toast);
+    background: var(--toast-soft);
+    animation: nfToastPop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.4) both 0.08s;
+}
+
+.nf-toast-bar {
+    background: var(--toast);
+    transform-origin: left center;
+    animation: nfToastCountdown linear forwards;
+}
+
+.nf-toast:hover .nf-toast-bar {
+    animation-play-state: paused;
+}
+
+@keyframes nfToastCountdown {
+    from { transform: scaleX(1); }
+    to { transform: scaleX(0); }
+}
+
+@keyframes nfToastPop {
+    from { transform: scale(0.4); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nf-toast-icon { animation: none; }
 }

@@ -13,7 +13,7 @@
     </div>
 
     <div class="grid md:grid-cols-[1fr_280px] gap-6 items-start">
-        <div class="bg-white border border-[#EADBC4] rounded-xl p-5.5">
+        <div class="bg-white border border-[#E9E4E0] rounded-xl p-5.5">
             <div class="flex flex-col gap-4">
                 @foreach($order->items as $item)
                     @php $p = $item->variant?->product; $img = $p?->getFirstMediaUrl('images', 'thumb') ?: $p?->getFirstMediaUrl('images'); @endphp
@@ -26,17 +26,17 @@
                     </div>
                 @endforeach
             </div>
-            <div class="flex justify-between border-t border-[#EFE2CE] mt-4 pt-3.5 font-semibold"><span>Total</span><span>{{ shop_price($order->total_amount) }}</span></div>
+            <div class="flex justify-between border-t border-[#F0ECE9] mt-4 pt-3.5 font-semibold"><span>Total</span><span>{{ shop_price($order->total_amount) }}</span></div>
         </div>
 
         <div class="flex flex-col gap-4.5">
-            <div class="bg-white border border-[#EADBC4] rounded-xl p-5">
+            <div class="bg-white border border-[#E9E4E0] rounded-xl p-5">
                 <div class="text-[13px] font-semibold mb-4">Status</div>
                 <div class="flex flex-col">
                     @foreach($flow as $key => $label)
                         @php $done = $order_index !== false && array_search($key, array_keys($flow), true) <= $order_index && $order->status->value !== 'cancelled'; @endphp
                         <div class="flex gap-3 items-center py-1.5">
-                            <span class="w-[11px] h-[11px] rounded-full flex-none" style="background:{{ $done ? '#691d2a' : '#E3D8C4' }};"></span>
+                            <span class="w-[11px] h-[11px] rounded-full flex-none" style="background:{{ $done ? '#3B2F2D' : '#E9E4E0' }};"></span>
                             <span class="text-[13.5px]" style="color:{{ $done ? '#111' : '#9CA3AF' }};">{{ $label }}</span>
                         </div>
                     @endforeach
@@ -45,7 +45,7 @@
                     @endif
                 </div>
             </div>
-            <div class="bg-white border border-[#EADBC4] rounded-xl p-5">
+            <div class="bg-white border border-[#E9E4E0] rounded-xl p-5">
                 <div class="text-[13px] font-semibold mb-2">Shipping to</div>
                 <div class="text-[13px] text-gray-500 leading-relaxed">{{ $order->shipping_name }}<br>{{ $order->shipping_address }}<br>{{ $order->shipping_city }}, {{ $order->shipping_district }}</div>
             </div>

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Database\Factories\CategoryFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -9,10 +10,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 class Category extends Model
 {
-    /** @use HasFactory<\Database\Factories\CategoryFactory> */
+    /** @use HasFactory<CategoryFactory> */
     use HasFactory, SoftDeletes;
 
     /**
@@ -81,6 +83,14 @@ class Category extends Model
     public function scopeParents(Builder $query): void
     {
         $query->whereNull('parent_id');
+    }
+
+    /**
+     * Public URL of the uploaded category image, if any.
+     */
+    public function getImageUrlAttribute(): ?string
+    {
+        return $this->image_path ? Storage::disk('public')->url($this->image_path) : null;
     }
 
     public function getFullPathAttribute(): string

@@ -33,7 +33,7 @@ class StorefrontShoppingTest extends TestCase
     {
         $this->get('/')
             ->assertOk()
-            ->assertSee('Considered pieces')
+            ->assertSee('বেস্ট সেলার')
             ->assertSee('Marlowe Structured Tote');
     }
 
@@ -51,7 +51,7 @@ class StorefrontShoppingTest extends TestCase
 
         $this->get("/product/{$product->slug}")
             ->assertOk()
-            ->assertSee('Add to bag');
+            ->assertSee('ব্যাগে যোগ করুন');
     }
 
     public function test_choosing_a_variant_puts_an_item_in_the_session_cart(): void
@@ -87,13 +87,12 @@ class StorefrontShoppingTest extends TestCase
 
         $response = $this->post('/checkout', [
             'email' => 'guest@example.com',
-            'first_name' => 'Amara',
-            'last_name' => 'Osei',
+            'name' => 'Amara Osei',
             'address' => '48 Linden Ave',
-            'apt' => '7C',
-            'city' => 'Brooklyn',
-            'zip' => '11201',
-            'phone' => '+1 415 552 0192',
+            'city' => 'ঢাকা',
+            'area' => 'বনানী',
+            'postcode' => '1213',
+            'phone' => '01712345678',
             'payment_method' => 'cod',
         ]);
 
@@ -155,29 +154,29 @@ class StorefrontShoppingTest extends TestCase
         $this->assertDatabaseHas('addresses', ['id' => $address->id]);
     }
 
-    public function test_guest_can_track_order_with_number_and_email(): void
+    public function test_guest_can_track_order_with_number_and_phone(): void
     {
         $variant = ProductVariant::whereHas('product', fn ($q) => $q->where('slug', 'pebbled-card-holder'))->first();
         $this->post('/cart', ['variant_id' => $variant->id]);
         $this->post('/checkout', [
             'email' => 'track@example.com',
-            'first_name' => 'Track', 'last_name' => 'Me',
-            'address' => '1 St', 'city' => 'Town', 'zip' => '1000',
-            'phone' => '123', 'payment_method' => 'cod',
+            'name' => 'Track Me',
+            'address' => '1 St', 'city' => 'চট্টগ্রাম', 'area' => 'আগ্রাবাদ',
+            'phone' => '01712345678', 'payment_method' => 'cod',
         ]);
 
         $order = Order::latest('id')->first();
 
         $this->post('/track', [
             'order_number' => $order->order_number,
-            'email' => 'track@example.com',
-        ])->assertOk()->assertSee($order->order_number)->assertSee('Order placed');
+            'phone' => '01712345678',
+        ])->assertOk()->assertSee(bn_digits($order->order_number))->assertSee('অর্ডার গ্রহণ করা হয়েছে');
 
-        // Wrong email reveals nothing.
+        // A different phone number reveals nothing.
         $this->post('/track', [
             'order_number' => $order->order_number,
-            'email' => 'wrong@example.com',
-        ])->assertOk()->assertSee('No order found');
+            'phone' => '01812345678',
+        ])->assertOk()->assertSee('পাওয়া যায়নি');
     }
 
     public function test_registered_customer_sees_their_orders(): void
@@ -189,13 +188,13 @@ class StorefrontShoppingTest extends TestCase
         $this->post('/cart', ['variant_id' => $variant->id]);
         $this->post('/checkout', [
             'email' => $user->email,
-            'first_name' => 'Test', 'last_name' => 'User',
-            'address' => '1 St', 'city' => 'Town', 'zip' => '1000',
-            'phone' => '123', 'payment_method' => 'online',
+            'name' => 'Test User',
+            'address' => '1 St', 'city' => 'ঢাকা', 'area' => 'মিরপুর',
+            'phone' => '01712345678', 'payment_method' => 'mobile_banking',
         ]);
 
         $this->get('/account')
             ->assertOk()
-            ->assertSee('NF-'.date('Y'));
+            ->assertSee(config('shop.order_number_prefix').'-');
     }
 }

@@ -15,7 +15,7 @@ class CouponController extends Controller
 
     public function index(): View
     {
-        $coupons = Coupon::latest()->paginate(config('shop.per_page'));
+        $coupons = Coupon::latest()->paginate(24);
 
         return view('admin.coupons.index', compact('coupons'));
     }
@@ -38,7 +38,7 @@ class CouponController extends Controller
             "Created coupon {$coupon->code}",
         );
 
-        return redirect()->route('admin.coupons.index')->with('success', 'Coupon created.');
+        return redirect()->route('admin.coupons.index')->with('success', 'কুপন তৈরি হয়েছে।');
     }
 
     public function edit(Coupon $coupon): RedirectResponse
@@ -59,7 +59,7 @@ class CouponController extends Controller
             "Updated coupon {$coupon->code}",
         );
 
-        return redirect()->route('admin.coupons.index')->with('success', 'Coupon updated.');
+        return redirect()->route('admin.coupons.index')->with('success', 'কুপন আপডেট হয়েছে।');
     }
 
     public function destroy(Coupon $coupon): RedirectResponse
@@ -74,7 +74,7 @@ class CouponController extends Controller
             "Deleted coupon {$coupon->code}",
         );
 
-        return redirect()->route('admin.coupons.index')->with('success', 'Coupon deleted.');
+        return redirect()->route('admin.coupons.index')->with('success', 'কুপন মুছে ফেলা হয়েছে।');
     }
 
     /**

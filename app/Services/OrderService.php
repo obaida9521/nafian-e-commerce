@@ -26,7 +26,8 @@ class OrderService
      * @param  array{
      *     items: array<int, array{variant_id: int, quantity: int}>,
      *     shipping_name: string, shipping_phone: string, shipping_address: string,
-     *     shipping_city: string, shipping_district: string,
+     *     shipping_city: string, shipping_district: string, shipping_area?: string|null,
+     *     shipping_postcode?: string|null, delivery_zone?: string,
      *     payment_method: string, coupon_code?: string|null, delivery_charge?: float,
      *     guest_email?: string|null, guest_phone?: string|null, notes?: string|null
      * }  $data
@@ -68,8 +69,9 @@ class OrderService
             $coupon = null;
 
             if (! empty($data['coupon_code'])) {
-                $coupon = $this->coupons->validate($data['coupon_code'], $subtotal, $user);
-                $discount = $this->coupons->calculateDiscount($coupon, $subtotal);
+                $unitPrices = collect($lines)->flatMap(fn (array $line) => array_fill(0, $line['quantity'], (float) $line['unit_price']))->all();
+                $coupon = $this->coupons->validate($data['coupon_code'], $subtotal, $user, count($unitPrices));
+                $discount = $this->coupons->calculateDiscount($coupon, $subtotal, $unitPrices);
             }
 
             $deliveryCharge = (float) ($data['delivery_charge'] ?? 0);
@@ -85,7 +87,10 @@ class OrderService
                 'shipping_phone' => $data['shipping_phone'],
                 'shipping_address' => $data['shipping_address'],
                 'shipping_city' => $data['shipping_city'],
+                'shipping_area' => $data['shipping_area'] ?? null,
                 'shipping_district' => $data['shipping_district'],
+                'shipping_postcode' => $data['shipping_postcode'] ?? null,
+                'delivery_zone' => $data['delivery_zone'] ?? 'inside',
                 'subtotal' => $subtotal,
                 'discount_amount' => $discount,
                 'delivery_charge' => $deliveryCharge,
@@ -97,6 +102,8 @@ class OrderService
             ]);
 
             $order->items()->createMany($lines);
+
+            $order->statusHistory()->create(['status' => OrderStatus::Pending, 'note' => 'ওয়েবসাইট']);
 
             $order->payments()->create([
                 'method' => $data['payment_method'],
@@ -140,6 +147,8 @@ class OrderService
 
             $order->update(['status' => $newStatus, ...$timestamps]);
 
+            $order->statusHistory()->create(['status' => $newStatus, 'admin_id' => $admin->id, 'note' => $admin->name]);
+
             if ($newStatus === OrderStatus::Delivered) {
                 $this->inventory->convertReservationToSale($order);
             }
@@ -179,6 +188,8 @@ class OrderService
                 'cancelled_reason' => $reason,
             ]);
 
+            $order->statusHistory()->create(['status' => OrderStatus::Cancelled, 'admin_id' => $admin->id, 'note' => $reason]);
+
             $this->inventory->releaseReservation($order);
 
             $this->activityLogger->log(
@@ -195,19 +206,47 @@ class OrderService
         SendOrderNotification::dispatch($order->id, 'cancelled');
     }
 
+    /**
+     * Let a shopper cancel their own order while it has not been packed yet.
+     */
+    public function cancelByCustomer(Order $order): void
+    {
+        if (! $order->status->isCustomerCancellable()) {
+            throw ValidationException::withMessages([
+                'order' => 'এই অর্ডারটি এখন আর বাতিল করা যাবে না।',
+            ]);
+        }
+
+        DB::transaction(function () use ($order): void {
+            $order->update([
+                'status' => OrderStatus::Cancelled,
+                'cancelled_at' => now(),
+                'cancelled_reason' => 'গ্রাহক বাতিল করেছেন',
+            ]);
+
+            $order->statusHistory()->create(['status' => OrderStatus::Cancelled, 'note' => 'গ্রাহক বাতিল করেছেন']);
+
+            $this->inventory->releaseReservation($order);
+        });
+
+        SendOrderNotification::dispatch($order->id, 'cancelled');
+    }
+
+    /**
+     * Next order number, e.g. NFN-1001, NFN-1002 …
+     */
     public function generateOrderNumber(): string
     {
-        $prefix = config('shop.order_number_prefix', 'ORD');
-        $year = date('Y');
+        $prefix = config('shop.order_number_prefix', 'NFN');
 
-        return DB::transaction(function () use ($prefix, $year): string {
-            $latest = Order::whereYear('created_at', $year)
-                ->lockForUpdate()
-                ->count();
+        return DB::transaction(function () use ($prefix): string {
+            $count = Order::query()->lockForUpdate()->count();
 
-            $sequence = str_pad((string) ($latest + 1), 6, '0', STR_PAD_LEFT);
+            do {
+                $number = $prefix.'-'.(1001 + $count++);
+            } while (Order::where('order_number', $number)->exists());
 
-            return "{$prefix}-{$year}-{$sequence}";
+            return $number;
         });
     }
 }

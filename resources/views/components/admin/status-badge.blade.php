@@ -1,18 +1,16 @@
-@props(['color' => 'gray', 'label' => ''])
-
+@props(['status' => null, 'color' => null, 'label' => ''])
 @php
-    $styles = [
-        'amber' => 'bg-amber-100 text-amber-800',
-        'blue' => 'bg-blue-100 text-blue-800',
-        'indigo' => 'bg-indigo-100 text-indigo-800',
-        'purple' => 'bg-purple-100 text-purple-800',
-        'green' => 'bg-green-100 text-green-800',
-        'red' => 'bg-red-100 text-red-800',
-        'gray' => 'bg-gray-100 text-gray-700',
-    ][$color] ?? 'bg-gray-100 text-gray-700';
+    /** @var \App\Enums\OrderStatus|null $status */
+    $pill = $status instanceof \App\Enums\OrderStatus
+        ? $status->pill()
+        : match ($color) {
+            'green' => ['bg' => '#F1F4F1', 'color' => '#3F5A42'],
+            'red' => ['bg' => '#F7EFEE', 'color' => '#8A5A52'],
+            'blue', 'indigo' => ['bg' => '#EDF2F7', 'color' => '#3C5A78'],
+            default => ['bg' => '#F3EFEC', 'color' => '#3E3532'],
+        };
 @endphp
-
-<span {{ $attributes->merge(['class' => "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium $styles"]) }}>
-    <span class="w-1.5 h-1.5 rounded-full bg-current opacity-70"></span>
-    {{ $label ?: $slot }}
+<span {{ $attributes->merge(['class' => 'inline-flex items-center rounded-full px-3 py-1.5 text-[13px] font-semibold']) }}
+      style="background:{{ $pill['bg'] }};color:{{ $pill['color'] }};">
+    {{ $status?->labelBn() ?: ($label ?: $slot) }}
 </span>

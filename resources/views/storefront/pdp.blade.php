@@ -1,212 +1,432 @@
 @extends('layouts.app')
 @section('title', $product->name)
+@section('no_tabbar', true)
+@section('mobile_action_bar', true)
+
+@php
+    /** @var \App\Models\Product $product */
+    $activeVariants = $product->variants->where('is_active', true)->values();
+    $cheapest = $activeVariants->sortBy('price')->first();
+    $category = $product->categories->first();
+    // Gallery slides: product photos, then each variant's own photo, then the YouTube video.
+    $slides = $product->getMedia('images')->map(fn ($media) => [
+        'type' => 'image', 'src' => $media->getUrl(), 'thumb' => $media->getUrl('thumb'),
+    ])->values();
+    $variantSlides = [];
+    foreach ($activeVariants as $activeVariant) {
+        if ($variantMedia = $activeVariant->getFirstMedia('image')) {
+            $variantSlides[$activeVariant->id] = $slides->count();
+            $slides->push(['type' => 'image', 'src' => $variantMedia->getUrl(), 'thumb' => $variantMedia->getUrl('thumb')]);
+        }
+    }
+    if ($youtubeId = $product->youtubeId()) {
+        $slides->push(['type' => 'video', 'id' => $youtubeId, 'thumb' => "https://i.ytimg.com/vi/{$youtubeId}/hqdefault.jpg"]);
+    }
+    $totalReviews = $product->reviews->count();
+
+    $attributeSlugs = ['size' => 'সাইজ', 'color' => 'রং'];
+    $optionGroups = collect($attributeSlugs)
+        ->map(fn ($label, $slug) => [
+            'slug' => $slug,
+            'label' => $label,
+            'values' => $activeVariants->map(fn ($v) => $v->attributeValue($slug))->filter()->unique()->values()->all(),
+        ])
+        ->filter(fn ($group) => count($group['values']) > 0 && ! (count($group['values']) === 1 && $group['values'][0] === 'One Size'))
+        ->values();
+
+    $variantPayload = $activeVariants->map(fn ($v) => [
+        'id' => $v->id,
+        'options' => collect($attributeSlugs)->keys()->mapWithKeys(fn ($slug) => [$slug => $v->attributeValue($slug)])->all(),
+        'price' => (float) $v->price,
+        'compare' => (float) $v->compare_at_price,
+        'available' => $v->available_quantity,
+        'label' => $v->shortLabel(),
+        'slide' => $variantSlides[$v->id] ?? null,
+    ])->values();
+    $firstAvailable = $variantPayload->firstWhere('available', '>', 0) ?? $variantPayload->first();
+
+    $accordions = collect([
+        ['বিস্তারিত বিবরণ', $product->description],
+        ['উপাদান', $product->ingredients],
+        ['ব্যবহারের নিয়ম', $product->usage_instructions],
+        ['ডেলিভারি ও রিটার্ন', 'ঢাকার ভেতরে ২৪ ঘণ্টা ('.bn_price($general['delivery_inside']).'), ঢাকার বাইরে ২–৩ দিন ('.bn_price($general['delivery_outside']).')। সিল অক্ষত থাকলে ৭ দিনের মধ্যে রিটার্ন করা যাবে।'],
+    ])->filter(fn ($row) => filled($row[1]))->values();
+@endphp
+
+@section('mobile_header')
+@endsection
 
 @section('content')
-@php
-    $minPrice = $product->variants->min('price');
-    $compareAt = $product->variants->max('compare_at_price');
-    $inStock = $product->total_stock > 0;
-    $cat = $product->categories->first()?->name;
-@endphp
-<div class="max-w-[1180px] mx-auto px-4 sm:px-6 pt-6 pb-[72px] nf-fade"
-     x-data="{
-        color: @js($colorOptions[0] ?? null),
-        size: @js($sizeOptions[0] ?? null),
-        qty: 1,
-        tab: '{{ $errors->any() ? 'reviews' : 'desc' }}'
-     }">
-    <a href="{{ route('store.shop') }}" class="text-[13px] text-gray-500 mb-5 inline-flex items-center gap-1.5">← Back to shop</a>
+<div x-data="{
+        variants: @js($variantPayload),
+        selected: @js($firstAvailable['options'] ?? []),
+        quantity: 1,
+        image: @js($firstAvailable['slide'] ?? 0),
+        playing: false,
+        // `play` is false or the gallery ('phone' | 'desk') whose player should mount.
+        show(index, play = false) { this.image = index; this.playing = play; },
+        openPanel: @js($accordions->isNotEmpty() ? 0 : null),
+        wish: false,
+        get variant() {
+            return this.variants.find(v => Object.keys(this.selected).every(k => ! this.selected[k] || v.options[k] === this.selected[k])) ?? this.variants[0];
+        },
+        get available() { return this.variant ? this.variant.available : 0; },
+        optionAvailable(slug, value) {
+            return this.variants.some(v => v.options[slug] === value && v.available > 0);
+        },
+        priceFor(slug, value) {
+            const match = this.variants.find(v => v.options[slug] === value);
+            return match ? match.price : null;
+        },
+        init() {
+            this.$watch('quantity', q => { if (q > this.available) this.quantity = Math.max(1, this.available); });
+            // Picking a variant with its own photo jumps the gallery to it (and stops the video).
+            this.$watch('selected', () => { const slide = this.variant?.slide; if (slide !== null && slide !== undefined) this.show(slide); });
+            // Switching between the phone and desktop gallery would leave the player running hidden.
+            window.matchMedia('(min-width: 640px)').addEventListener('change', () => { this.playing = false; });
+        },
+     }"
+     x-init="init()" class="nf-fade">
 
-    <div class="grid md:grid-cols-2 gap-8 md:gap-14 items-start">
-        {{-- Gallery --}}
-        @php $images = $product->getMedia('images'); @endphp
-        <div>
-            @if($images->isNotEmpty())
-                <div x-data="{
-                        active: @js($images->first()->getUrl()),
-                        swapping: false,
-                        change(url) {
-                            if (url === this.active || this.swapping) { return; }
-                            this.swapping = true;
-                            const img = new Image();
-                            const show = () => {
-                                this.active = url;
-                                requestAnimationFrame(() => { this.swapping = false; });
-                            };
-                            img.onload = show;
-                            img.onerror = show;
-                            img.src = url;
-                        }
-                     }">
-                    <div class="relative rounded-[14px] overflow-hidden aspect-[4/5] bg-[#EFE6D6]">
-                        <img :src="active" alt="{{ $product->name }}"
-                             class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-out"
-                             :class="swapping ? 'opacity-0' : 'opacity-100'">
-                    </div>
-                    @if($images->count() > 1)
-                        <div class="grid grid-cols-4 gap-3 mt-3">
-                            @foreach($images as $media)
-                                <button type="button" @click="change(@js($media->getUrl()))"
-                                        class="aspect-square rounded-[9px] overflow-hidden transition duration-300 hover:scale-[1.04]"
-                                        :style="active===@js($media->getUrl()) ? 'box-shadow:0 0 0 2px #691d2a' : 'box-shadow:0 0 0 1px #EADBC4'">
-                                    <img src="{{ $media->getUrl('thumb') ?: $media->getUrl() }}" alt="" class="w-full h-full object-cover">
+    {{-- ── Phone gallery ── --}}
+    <div class="sm:hidden relative">
+        <div class="relative h-80 overflow-hidden">
+            @include('storefront.partials.pdp-stage', ['slides' => $slides, 'alt' => $product->name, 'where' => 'phone'])
+            <div class="absolute inset-0 -z-10" style="background:linear-gradient(160deg, color-mix(in srgb, {{ $product->tone ?? '#C2BBB0' }} 12%, #F6F3F1), color-mix(in srgb, {{ $product->tone ?? '#C2BBB0' }} 34%, #E6E0DA));"></div>
+
+            <div class="relative flex justify-between px-5 pt-4">
+                <a href="{{ url()->previous() !== url()->current() ? url()->previous() : route('store.shop') }}" class="bg-white/90 rounded-full w-[38px] h-[38px] grid place-items-center text-[16px]" aria-label="ফিরে যান">←</a>
+                <button type="button" @click="wish = ! wish; try { localStorage.setItem('nf-wish-{{ $product->id }}', wish ? '1' : '') } catch {}"
+                        x-init="try { wish = !! localStorage.getItem('nf-wish-{{ $product->id }}') } catch {}"
+                        class="bg-white/90 rounded-full w-[38px] h-[38px] grid place-items-center text-[15px]" :class="wish && 'text-rose'" aria-label="পছন্দের তালিকা">
+                    <span x-text="wish ? '♥' : '♡'">♡</span>
+                </button>
+            </div>
+
+            <template x-if="variant && variant.compare > variant.price && ! playing">
+                <span class="absolute left-5 bottom-10 bg-espresso text-white rounded-full px-[13px] py-1.5 text-[12px] font-semibold"
+                      x-text="bnNumber(Math.round((variant.compare - variant.price) / variant.compare * 100)) + '% ছাড়'"></span>
+            </template>
+
+            @if($slides->count() > 1)
+                <div x-show="! playing" class="absolute left-1/2 -translate-x-1/2 bottom-4 flex justify-center items-center gap-1.5 bg-black/25 backdrop-blur-sm rounded-full px-2.5 py-1.5">
+                    @foreach($slides as $index => $slide)
+                        @if($slide['type'] === 'video')
+                            <button type="button" @click="show({{ $index }}, 'phone')" class="h-5 px-2 rounded-full bg-white/90 text-espresso text-[10.5px] font-semibold flex items-center gap-1" aria-label="ভিডিও">
+                                <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5-11-6.5Z"/></svg>ভিডিও
+                            </button>
+                        @else
+                            <button type="button" @click="show({{ $index }})" class="h-1.5 rounded-full transition-all" :class="image === {{ $index }} ? 'w-6 bg-white' : 'w-1.5 bg-white/55'" aria-label="ছবি {{ $index + 1 }}"></button>
+                        @endif
+                    @endforeach
+                </div>
+            @endif
+        </div>
+    </div>
+
+    <div class="sm:hidden px-5 pt-[18px] pb-6">
+        <div class="text-[12.5px] text-muted">{{ $category?->name }}</div>
+        <h1 class="mt-1 font-display text-[28px] leading-tight">{{ $product->name }}</h1>
+        <div class="mt-2 flex items-center gap-2 text-[13.5px] text-cocoa flex-wrap">
+            @if($product->rating)
+                <span class="text-espresso">{{ str_repeat('★', (int) round($product->rating)) }}</span>
+                {{ bn_digits(number_format((float) $product->rating, 1)) }} <span class="text-muted">· {{ bn_digits($totalReviews) }}</span>
+            @endif
+            <span class="rounded-full px-[11px] py-1 text-[12px] font-semibold" :class="available > 0 ? 'bg-accent-soft text-accent' : 'bg-rose-soft text-rose'"
+                  x-text="available > 0 ? 'স্টকে আছে' : 'স্টকে নেই'"></span>
+        </div>
+        @if($product->short_description)
+            <p class="mt-3.5 text-[15.5px] leading-[1.85] text-cocoa">{{ $product->short_description }}</p>
+        @endif
+
+        @foreach($optionGroups as $group)
+            <div class="mt-5">
+                <div class="text-[12px] font-medium tracking-[0.14em] uppercase text-muted">{{ $group['label'] }}</div>
+                <div class="mt-3 flex gap-[9px] flex-wrap">
+                    @foreach($group['values'] as $value)
+                        <button type="button" @click="selected['{{ $group['slug'] }}'] = @js($value)"
+                                :disabled="! optionAvailable(@js($group['slug']), @js($value))"
+                                class="flex-1 min-w-[92px] rounded-[14px] py-3 px-3 text-center disabled:opacity-40"
+                                :class="selected['{{ $group['slug'] }}'] === @js($value) ? 'bg-espresso text-white' : 'bg-sand-3 text-cocoa'">
+                            <span class="block text-[13px]">{{ bn_digits($value) }}</span>
+                            <template x-if="priceFor(@js($group['slug']), @js($value)) !== null">
+                                <span class="block mt-0.5 text-[14px] font-semibold" x-text="'৳' + bnNumber(priceFor(@js($group['slug']), @js($value)))"></span>
+                            </template>
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+        @endforeach
+
+        <div class="mt-[18px] bg-panel-2 rounded-2xl p-4 flex flex-col gap-2.5 text-[13.5px] text-cocoa">
+            <div class="flex justify-between"><span>ঢাকার ভেতরে</span><span class="text-ink">২৪ ঘণ্টা · {{ bn_price($general['delivery_inside']) }}</span></div>
+            <div class="flex justify-between"><span>ঢাকার বাইরে</span><span class="text-ink">২–৩ দিন · {{ bn_price($general['delivery_outside']) }}</span></div>
+            <div class="flex justify-between"><span>ক্যাশ অন ডেলিভারি</span><span class="text-accent">সারাদেশে</span></div>
+        </div>
+
+        <div class="mt-[18px] flex flex-col">
+            @foreach($accordions as $index => [$title, $body])
+                <button type="button" @click="openPanel = openPanel === {{ $index }} ? null : {{ $index }}" class="py-3.5 flex justify-between text-[15px] font-medium text-left">
+                    {{ $title }} <span class="text-muted" x-text="openPanel === {{ $index }} ? '−' : '+'">+</span>
+                </button>
+                <p x-show="openPanel === {{ $index }}" x-collapse x-cloak class="pb-3.5 text-[15px] leading-[1.85] text-cocoa">{{ $body }}</p>
+                <div class="nf-line"></div>
+            @endforeach
+        </div>
+
+        {{-- Reviews (phone): overview, latest few, then the full reviews page --}}
+        <section id="reviews-mobile" class="mt-8 scroll-mt-4">
+            <div class="flex items-baseline justify-between">
+                <h2 class="font-display text-[24px]">রিভিউ <span class="font-sans text-[15px] text-muted">({{ bn_digits($totalReviews) }})</span></h2>
+                @if($totalReviews > 0)
+                    <a href="{{ route('store.product.reviews', $product->slug) }}" class="text-[14px] font-medium text-accent">সব দেখুন →</a>
+                @endif
+            </div>
+
+            <div class="mt-3.5">
+                @include('storefront.partials.review-summary')
+            </div>
+
+            <div class="mt-3">
+                @include('storefront.partials.review-list', ['reviews' => $previewReviews, 'clamp' => true])
+            </div>
+
+            <div class="mt-3.5 flex gap-2.5">
+                @if($totalReviews > $previewReviews->count())
+                    <a href="{{ route('store.product.reviews', $product->slug) }}" class="flex-1 text-center bg-espresso text-white rounded-full py-3.5 text-[14.5px] font-semibold">
+                        সব {{ bn_digits($totalReviews) }}টি রিভিউ দেখুন
+                    </a>
+                @endif
+                <a href="{{ route('store.product.reviews', $product->slug) }}#write-review" class="flex-1 text-center bg-sand-3 text-espresso rounded-full py-3.5 text-[14.5px] font-semibold">
+                    {{ $userReview ? 'রিভিউ সম্পাদনা' : 'রিভিউ লিখুন' }}
+                </a>
+            </div>
+        </section>
+
+        {{-- Related (phone): swipeable rail, edge to edge --}}
+        @if($related->isNotEmpty())
+            <section class="mt-9">
+                <div class="flex items-baseline justify-between">
+                    <h2 class="font-display text-[24px]">সাথে মানানসই</h2>
+                    @if($category)
+                        <a href="{{ route('store.shop.category', $category->slug) }}" class="text-[14px] font-medium text-accent">সব দেখুন →</a>
+                    @endif
+                </div>
+                <div class="mt-3.5 -mx-5 px-5 nf-rail gap-3 pb-1">
+                    @foreach($related as $relatedProduct)
+                        @include('storefront.partials.product-card', ['product' => $relatedProduct, 'style' => 'rail'])
+                    @endforeach
+                </div>
+            </section>
+        @endif
+    </div>
+
+    {{-- ── Desktop ── --}}
+    <div class="hidden sm:block">
+        <div class="px-8 pt-5 pb-[22px] text-[14px] text-muted">
+            <a href="{{ route('store.home') }}" class="hover:text-accent">হোম</a><span class="mx-1.5">/</span>
+            @if($category)<a href="{{ route('store.shop.category', $category->slug) }}" class="hover:text-accent">{{ $category->name }}</a><span class="mx-1.5">/</span>@endif
+            <span class="text-ink">{{ $product->name }}</span>
+        </div>
+
+        <div class="px-8 grid desk:grid-cols-2 gap-8 desk:gap-14 items-start">
+            {{-- Gallery --}}
+            <div class="grid grid-cols-[88px_1fr] gap-3.5 max-[1100px]:grid-cols-1">
+                <div class="flex flex-col gap-3 p-1 -m-1 max-[1100px]:flex-row max-[1100px]:order-2 max-[1100px]:overflow-x-auto">
+                    @forelse($slides as $index => $slide)
+                        <button type="button" @click="show({{ $index }}, {{ $slide['type'] === 'video' ? "'desk'" : 'false' }})"
+                                class="relative flex-none aspect-[1/1.1] max-[1100px]:w-[84px] rounded-[14px] overflow-hidden bg-sand ring-offset-2 ring-offset-white transition"
+                                :class="image === {{ $index }} ? 'ring-2 ring-dust opacity-100' : 'opacity-55 hover:opacity-100'"
+                                :aria-current="image === {{ $index }}"
+                                aria-label="{{ $slide['type'] === 'video' ? 'ভিডিও চালান' : 'ছবি '.($index + 1) }}">
+                            <img src="{{ $slide['thumb'] }}" alt="" loading="lazy" onerror="this.remove()" class="w-full h-full object-cover">
+                            @if($slide['type'] === 'video')
+                                <span class="absolute inset-0 grid place-items-center"><span class="w-8 h-8 rounded-full bg-white/90 text-espresso grid place-items-center"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5-11-6.5Z"/></svg></span></span>
+                            @endif
+                        </button>
+                    @empty
+                        @for($i = 0; $i < 3; $i++)
+                            <div class="aspect-[1/1.1] max-[1100px]:w-[84px] rounded-[14px]" style="background:linear-gradient(160deg,#F3F0ED,#E9E4DF);"></div>
+                        @endfor
+                    @endforelse
+                </div>
+                <div class="relative rounded-[24px] overflow-hidden aspect-[1/1.08] shadow-[0_18px_44px_-30px_rgba(36,28,26,.6)]"
+                     style="background:linear-gradient(160deg, color-mix(in srgb, {{ $product->tone ?? '#C2BBB0' }} 12%, #F4F1EE), color-mix(in srgb, {{ $product->tone ?? '#C2BBB0' }} 32%, #E7E1DC));">
+                    @include('storefront.partials.pdp-stage', ['slides' => $slides, 'alt' => $product->name, 'where' => 'desk'])
+                    <template x-if="variant && variant.compare > variant.price && ! playing">
+                        <span class="absolute left-[18px] top-[18px] bg-espresso text-white rounded-full px-[15px] py-[7px] text-[12.5px] font-semibold"
+                              x-text="bnNumber(Math.round((variant.compare - variant.price) / variant.compare * 100)) + '% ছাড়'"></span>
+                    </template>
+                </div>
+            </div>
+
+            {{-- Details --}}
+            <div>
+                <div class="text-[14px] text-muted">NAFIAN{{ $category ? ' · '.$category->name : '' }}</div>
+                <h1 class="mt-2 font-display text-[44px] desk:text-[64px] leading-[1.15]">{{ $product->name }}</h1>
+
+                <div class="mt-2.5 flex items-center gap-2.5 text-[14.5px] text-cocoa flex-wrap">
+                    @if($product->rating)
+                        <span class="text-espresso">{{ str_repeat('★', (int) round($product->rating)) }}</span>
+                        {{ bn_digits(number_format((float) $product->rating, 1)) }}
+                        <span class="text-muted">· {{ bn_digits($totalReviews) }} রিভিউ</span>
+                    @endif
+                    <span class="rounded-full px-3 py-[5px] text-[13px] font-medium" :class="available > 0 ? 'bg-accent-soft text-accent' : 'bg-rose-soft text-rose'"
+                          x-text="available > 0 ? 'স্টকে আছে' : 'স্টকে নেই'"></span>
+                </div>
+
+                <div class="mt-5 flex items-baseline gap-3 flex-wrap">
+                    <span class="text-[34px] font-semibold text-espresso" x-text="'৳' + bnNumber(variant?.price ?? 0)"></span>
+                    <template x-if="variant && variant.compare > variant.price">
+                        <span class="text-[19px] text-muted line-through" x-text="'৳' + bnNumber(variant.compare)"></span>
+                    </template>
+                    <template x-if="variant && variant.compare > variant.price">
+                        <span class="bg-clay-soft text-espresso rounded-full px-3.5 py-1.5 text-[13px] font-semibold"
+                              x-text="'সাশ্রয় ৳' + bnNumber(variant.compare - variant.price)"></span>
+                    </template>
+                </div>
+
+                @if($product->short_description)
+                    <p class="mt-[18px] text-[16.5px] leading-[1.9] text-cocoa">{{ $product->short_description }}</p>
+                @endif
+
+                @foreach($optionGroups as $group)
+                    <div class="mt-6">
+                        <div class="text-[14.5px] font-semibold">{{ $group['label'] }} নির্বাচন করুন</div>
+                        <div class="mt-3 flex gap-2.5 flex-wrap">
+                            @foreach($group['values'] as $value)
+                                <button type="button" @click="selected['{{ $group['slug'] }}'] = @js($value)"
+                                        :disabled="! optionAvailable(@js($group['slug']), @js($value))"
+                                        class="rounded-[16px] px-[22px] py-3.5 text-left disabled:opacity-40 disabled:line-through"
+                                        :class="selected['{{ $group['slug'] }}'] === @js($value) ? 'bg-espresso text-white' : 'bg-sand text-cocoa'">
+                                    <span class="block text-[14.5px]">{{ bn_digits($value) }}</span>
+                                    <template x-if="priceFor(@js($group['slug']), @js($value)) !== null">
+                                        <span class="block text-[14px] font-semibold" x-text="'৳' + bnNumber(priceFor(@js($group['slug']), @js($value)))"></span>
+                                    </template>
                                 </button>
                             @endforeach
                         </div>
-                    @endif
-                </div>
-            @else
-                <div class="relative rounded-[14px] overflow-hidden aspect-[4/5]" style="background:linear-gradient(155deg,{{ $product->tone ?? '#C9B49A' }},{{ $product->tone2 ?? '#A98F6E' }});">
-                    <div class="absolute inset-0" style="background-image:repeating-linear-gradient(135deg,rgba(255,255,255,0.05) 0 2px,transparent 2px 20px);"></div>
-                    <div class="absolute left-4 bottom-3.5 font-mono text-[10px] text-[#691d2a]/50 bg-[#FAFAF8]/70 px-2 py-1 rounded-[5px]">PRODUCT · 4:5</div>
-                </div>
-            @endif
-        </div>
-
-        {{-- Info --}}
-        <div>
-            <div class="text-xs tracking-[0.1em] uppercase text-gray-400 font-semibold mb-2.5">{{ $cat }}</div>
-            <h1 class="text-[28px] font-semibold tracking-tight mb-3 leading-tight">{{ $product->name }}</h1>
-            <div class="flex items-center gap-3 mb-4.5">
-                <span class="text-[#D4A853] text-[15px]">{{ str_repeat('★', (int) round($product->rating)) }}{{ str_repeat('☆', 5 - (int) round($product->rating)) }}</span>
-                <span class="text-[13px] text-gray-400">{{ $product->reviews_count }} reviews</span>
-            </div>
-            <div class="flex items-center gap-3 mb-2">
-                <div class="text-[26px] font-semibold">{{ shop_price($minPrice) }}</div>
-                @if($compareAt && $compareAt > $minPrice)
-                    <div class="text-gray-400 line-through">{{ shop_price($compareAt) }}</div>
-                @endif
-            </div>
-            <div class="text-[13px] font-medium mb-6.5 {{ $inStock ? 'text-green-600' : 'text-red-500' }}">
-                {{ $inStock ? ($product->total_stock <= config('shop.low_stock_threshold') ? 'Low stock — only '.$product->total_stock.' left' : 'In stock, ready to ship') : 'Out of stock' }}
-            </div>
-
-            @if(!empty($colorOptions))
-                <div class="text-[13px] font-semibold mb-2.5">Colour</div>
-                <div class="flex gap-2.5 mb-6">
-                    @foreach($colorOptions as $name)
-                        <button @click="color=@js($name)" title="{{ $name }}" class="w-8 h-8 rounded-full"
-                                :style="`background:{{ color_hex($name) }};box-shadow:0 0 0 2px #fff, 0 0 0 3.5px ${color===@js($name) ? '#691d2a' : '#E3D8C4'}`"></button>
-                    @endforeach
-                </div>
-            @endif
-
-            @if(!empty($sizeOptions))
-                <div class="text-[13px] font-semibold mb-2.5">Size</div>
-                <div class="flex flex-wrap gap-2.5 mb-7">
-                    @foreach($sizeOptions as $name)
-                        <button @click="size=@js($name)" class="min-w-[46px] h-[42px] px-3 rounded-[7px] border text-sm font-medium"
-                                :style="`border-color:${size===@js($name) ? '#691d2a' : '#EADBC4'};background:${size===@js($name) ? '#691d2a' : '#fff'};color:${size===@js($name) ? '#fff' : '#374151'}`">{{ $name }}</button>
-                    @endforeach
-                </div>
-            @endif
-
-            <form method="POST" action="{{ route('store.cart.store') }}" class="js-cart-form flex gap-3 items-center">
-                @csrf
-                <input type="hidden" name="product_id" value="{{ $product->id }}">
-                <input type="hidden" name="color" :value="color">
-                <input type="hidden" name="size" :value="size">
-                <input type="hidden" name="quantity" :value="qty">
-                <div class="flex items-center border border-[#EADBC4] rounded-lg overflow-hidden h-[50px]">
-                    <button type="button" @click="qty = Math.max(1, qty-1)" class="w-[42px] h-[50px] text-lg text-gray-700">−</button>
-                    <span class="w-9 text-center font-semibold" x-text="qty"></span>
-                    <button type="button" @click="qty++" class="w-[42px] h-[50px] text-lg text-gray-700">+</button>
-                </div>
-                <button type="submit" {{ $inStock ? '' : 'disabled' }} class="flex-1 h-[50px] rounded-lg text-white text-[15px] font-semibold {{ $inStock ? 'bg-[#691d2a] hover:bg-[#4d141e]' : 'bg-gray-300 cursor-not-allowed' }}">
-                    {{ $inStock ? 'Add to bag · '.shop_price($minPrice) : 'Sold out' }}
-                </button>
-            </form>
-
-            {{-- Tabs --}}
-            <div class="mt-10 border-b border-[#EADBC4] flex gap-7">
-                @foreach(['desc'=>'Description','details'=>'Details','reviews'=>'Reviews'] as $key=>$label)
-                    <button @click="tab=@js($key)" class="pb-3 text-sm font-semibold -mb-px"
-                            :style="`color:${tab===@js($key) ? '#111' : '#9CA3AF'};border-bottom:2px solid ${tab===@js($key) ? '#691d2a' : 'transparent'}`">{{ $label }}</button>
+                    </div>
                 @endforeach
-            </div>
-            <div class="pt-5">
-                <div x-show="tab==='desc'"><p class="text-[15px] leading-relaxed text-gray-700">{{ $product->description }}</p></div>
-                <div x-show="tab==='details'" x-cloak class="flex flex-col gap-2.5">
-                    @foreach(['Crafted in small batches','Premium leather, wool & silk','Carbon-neutral delivery','30-day easy returns'] as $d)
-                        <div class="text-sm text-gray-700 flex gap-2.5"><span class="text-[#D4A853]">•</span>{{ $d }}</div>
+
+                <div class="mt-6 flex gap-3 items-center flex-wrap">
+                    <div class="flex items-center gap-[18px] bg-sand rounded-full px-5 py-3">
+                        <button type="button" @click="quantity = Math.max(1, quantity - 1)" class="text-[20px] text-muted leading-none" aria-label="কমান">−</button>
+                        <span class="text-[16px] font-semibold min-w-[20px] text-center" x-text="bnNumber(quantity)"></span>
+                        <button type="button" @click="quantity = Math.min(available, quantity + 1)" :disabled="quantity >= available" class="text-[20px] text-espresso leading-none disabled:opacity-30" aria-label="বাড়ান">+</button>
+                    </div>
+
+                    <template x-if="available > 0">
+                        <div class="flex gap-3 flex-wrap flex-1">
+                            <form method="POST" action="{{ route('store.cart.store') }}" class="js-cart-form flex-1 min-w-[200px]">
+                                @csrf
+                                <input type="hidden" name="variant_id" :value="variant?.id">
+                                <input type="hidden" name="quantity" :value="quantity">
+                                <button class="w-full bg-espresso text-white rounded-full px-8 py-[17px] text-[15.5px] font-semibold hover:bg-ink">ব্যাগে যোগ করুন</button>
+                            </form>
+                            <form method="POST" action="{{ route('store.cart.store') }}" class="js-cart-form flex-1 min-w-[160px]">
+                                @csrf
+                                <input type="hidden" name="variant_id" :value="variant?.id">
+                                <input type="hidden" name="quantity" :value="quantity">
+                                <input type="hidden" name="buy_now" value="1">
+                                <button class="w-full bg-accent-soft text-accent rounded-full px-8 py-[17px] text-[15.5px] font-semibold">এখনই কিনুন</button>
+                            </form>
+                        </div>
+                    </template>
+
+                    <template x-if="available < 1">
+                        <form method="POST" action="{{ route('store.product.restock', $product->slug) }}" class="flex-1 min-w-[260px] flex gap-2.5"
+                              x-data="{ busy: false }"
+                              @submit.prevent="
+                                busy = true;
+                                fetch($el.action, { method: 'POST', headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, body: new FormData($el) })
+                                    .then(async (r) => { const d = await r.json(); window.nfFlush?.(d.analytics); $dispatch('cart:toast', { type: r.ok ? 'success' : 'error', msg: d.message }); if (r.ok) $el.reset(); })
+                                    .catch(() => $el.submit())
+                                    .finally(() => busy = false);
+                              ">
+                            @csrf
+                            <input name="contact" required maxlength="120" placeholder="ইমেইল বা মোবাইল" class="flex-1 bg-sand rounded-full px-5 py-[17px] text-[14.5px] outline-none">
+                            <button :disabled="busy" class="bg-espresso text-white rounded-full px-7 text-[14.5px] font-semibold disabled:opacity-60">স্টকে এলে জানান</button>
+                        </form>
+                    </template>
+                </div>
+
+                <div class="mt-[26px] bg-panel rounded-[20px] px-6 py-[22px] flex flex-col gap-3 text-[14.5px] text-cocoa">
+                    <div class="flex justify-between"><span>ঢাকার ভেতরে</span><span class="text-ink">২৪ ঘণ্টা · {{ bn_price($general['delivery_inside']) }}</span></div>
+                    <div class="flex justify-between"><span>ঢাকার বাইরে</span><span class="text-ink">২–৩ দিন · {{ bn_price($general['delivery_outside']) }}</span></div>
+                    <div class="flex justify-between"><span>ক্যাশ অন ডেলিভারি</span><span class="text-accent">সারাদেশে</span></div>
+                    <div class="flex justify-between"><span>রিটার্ন</span><span class="text-ink">৭ দিন, সিল অক্ষত থাকলে</span></div>
+                </div>
+
+                <div class="mt-6 flex flex-col">
+                    @foreach($accordions as $index => [$title, $body])
+                        @unless($loop->first)<div class="nf-line"></div>@endunless
+                        <button type="button" @click="openPanel = openPanel === {{ $index }} ? null : {{ $index }}" class="py-4 flex justify-between text-[15px] font-medium text-left">
+                            {{ $title }} <span class="text-muted" x-text="openPanel === {{ $index }} ? '−' : '+'">+</span>
+                        </button>
+                        <p x-show="openPanel === {{ $index }}" x-collapse x-cloak class="pb-4 text-[15.5px] leading-[1.9] text-cocoa">{{ $body }}</p>
                     @endforeach
                 </div>
-                <div x-show="tab==='reviews'" x-cloak id="reviews">
-                    {{-- Summary --}}
-                    <div class="flex items-center gap-4 mb-6">
-                        <div class="text-[40px] font-semibold leading-none">{{ $product->rating ? number_format($product->rating, 1) : '—' }}</div>
-                        <div>
-                            <div class="text-[#D4A853] text-[15px]">{{ str_repeat('★', (int) round($product->rating)) }}{{ str_repeat('☆', 5 - (int) round($product->rating)) }}</div>
-                            <div class="text-[13px] text-gray-400 mt-0.5">{{ $product->reviews_count }} {{ Str::plural('review', $product->reviews_count) }}</div>
-                        </div>
+            </div>
+        </div>
+
+        {{-- Reviews --}}
+        <div id="reviews" class="px-8 pt-16 scroll-mt-24">
+            <h2 class="font-display text-[30px] mb-6">রিভিউ</h2>
+            <div class="grid desk:grid-cols-[300px_1fr] gap-8 desk:gap-12 items-start">
+                <div class="flex flex-col gap-4 desk:sticky desk:top-24">
+                    @include('storefront.partials.review-summary')
+                    <a href="#write-review" class="block text-center bg-sand-3 text-espresso rounded-full py-3.5 text-[14.5px] font-semibold hover:bg-sand-2">
+                        {{ $userReview ? 'আপনার রিভিউ সম্পাদনা করুন' : 'রিভিউ লিখুন' }}
+                    </a>
+                </div>
+
+                <div>
+                    @include('storefront.partials.review-list', ['reviews' => $previewReviews])
+
+                    @if($totalReviews > $previewReviews->count())
+                        <a href="{{ route('store.product.reviews', $product->slug) }}" class="mt-4 block text-center bg-espresso text-white rounded-full py-3.5 text-[14.5px] font-semibold hover:bg-ink">
+                            সব {{ bn_digits($totalReviews) }}টি রিভিউ দেখুন
+                        </a>
+                    @endif
+
+                    <div class="mt-5">
+                        @include('storefront.partials.review-form')
                     </div>
-
-                    {{-- Write / edit review --}}
-                    @auth('web')
-                        <form method="POST" action="{{ route('store.product.review', $product->slug) }}"
-                              x-data="{ rating: {{ $userReview->rating ?? 0 }}, hover: 0 }"
-                              class="border border-[#EADBC4] rounded-xl p-5 mb-7 bg-[#FBF4E8]">
-                            @csrf
-                            <div class="font-semibold text-sm mb-3">{{ $userReview ? 'Update your review' : 'Write a review' }}</div>
-                            <div class="flex gap-1 mb-4" @mouseleave="hover=0">
-                                @for($i = 1; $i <= 5; $i++)
-                                    <button type="button" @click="rating={{ $i }}" @mouseenter="hover={{ $i }}"
-                                            class="text-2xl leading-none transition"
-                                            :class="(hover || rating) >= {{ $i }} ? 'text-[#D4A853]' : 'text-gray-300'">★</button>
-                                @endfor
-                            </div>
-                            <input type="hidden" name="rating" :value="rating">
-                            @error('rating')<div class="text-xs text-red-500 mb-2">{{ $message }}</div>@enderror
-                            <input name="title" maxlength="150" value="{{ old('title', $userReview->title ?? '') }}" placeholder="Title (optional)"
-                                   class="w-full h-11 border border-[#EADBC4] rounded-lg px-3.5 text-sm bg-white outline-none focus:border-[#691d2a] mb-2.5">
-                            <textarea name="body" rows="3" maxlength="2000" placeholder="Share what you think about this piece…"
-                                      class="w-full border border-[#EADBC4] rounded-lg px-3.5 py-2.5 text-sm bg-white outline-none focus:border-[#691d2a] mb-3">{{ old('body', $userReview->body ?? '') }}</textarea>
-                            <button type="submit" :disabled="!rating"
-                                    class="h-11 px-6 rounded-lg bg-[#691d2a] hover:bg-[#4d141e] text-white text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed">
-                                {{ $userReview ? 'Update review' : 'Post review' }}
-                            </button>
-                        </form>
-                    @else
-                        <div class="border border-[#EADBC4] rounded-xl p-5 mb-7 text-sm text-gray-600">
-                            <a href="{{ route('login') }}" class="text-[#691d2a] font-semibold underline">Log in</a> to write a review.
-                        </div>
-                    @endauth
-
-                    {{-- Review list --}}
-                    @forelse($product->reviews as $review)
-                        <div class="border-b border-[#EFE2CE] py-4 last:border-0">
-                            <div class="flex items-center justify-between mb-1">
-                                <div class="font-semibold text-sm">{{ $review->user->name }}</div>
-                                <div class="text-[12px] text-gray-400">{{ $review->created_at->format('M j, Y') }}</div>
-                            </div>
-                            <div class="text-[#D4A853] text-[13px] mb-1.5">{{ str_repeat('★', $review->rating) }}{{ str_repeat('☆', 5 - $review->rating) }}</div>
-                            @if($review->title)<div class="font-semibold text-sm mb-0.5">{{ $review->title }}</div>@endif
-                            @if($review->body)<p class="text-sm text-gray-600 leading-relaxed">{{ $review->body }}</p>@endif
-                        </div>
-                    @empty
-                        <div class="text-sm text-gray-400">No reviews yet. Be the first to share your thoughts.</div>
-                    @endforelse
                 </div>
             </div>
         </div>
+
+        {{-- Related --}}
+        @if($related->isNotEmpty())
+            <div class="px-8 pt-16 pb-20">
+                <h2 class="font-display text-[30px] mb-6">সাথে মানানসই</h2>
+                <div class="grid grid-cols-2 desk:grid-cols-4 gap-[22px]">
+                    @foreach($related as $relatedProduct)
+                        @include('storefront.partials.product-card', ['product' => $relatedProduct, 'style' => 'mini'])
+                    @endforeach
+                </div>
+            </div>
+        @endif
     </div>
 
-    {{-- Related --}}
-    @if($related->isNotEmpty())
-    <div class="mt-16">
-        <h2 class="text-2xl font-semibold tracking-tight mb-5.5">You may also like</h2>
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-5">
-            @foreach($related as $p)
-                <a href="{{ route('store.product', $p->slug) }}">
-                    @php $pImg = $p->getFirstMediaUrl('images', 'thumb') ?: $p->getFirstMediaUrl('images'); @endphp
-                    <div class="relative rounded-[11px] overflow-hidden aspect-[4/5]" style="background:linear-gradient(155deg,{{ $p->tone ?? '#C2BBB0' }},{{ $p->tone2 ?? '#A39B8E' }});">
-                        @if($pImg)<img src="{{ $pImg }}" alt="{{ $p->name }}" loading="lazy" class="absolute inset-0 w-full h-full object-cover">@endif
-                    </div>
-                    <div class="pt-3"><div class="font-semibold text-[15px] mb-0.5">{{ $p->name }}</div><div class="text-[15px] font-semibold">{{ shop_price($p->variants->min('price')) }}</div></div>
-                </a>
-            @endforeach
+    {{-- Sticky buy bar (phones) --}}
+    <div class="sm:hidden fixed inset-x-0 bottom-0 z-50 bg-white px-5 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] flex gap-3 items-center shadow-[0_-8px_22px_-20px_rgba(36,28,26,.9)]">
+        <div>
+            <div class="text-[18px] font-semibold text-espresso" x-text="'৳' + bnNumber(variant?.price ?? 0)"></div>
+            <div class="text-[12px] text-muted" x-text="variant ? variant.label : ''"></div>
         </div>
+        <template x-if="available > 0">
+            <form method="POST" action="{{ route('store.cart.store') }}" class="js-cart-form flex-1">
+                @csrf
+                <input type="hidden" name="variant_id" :value="variant?.id">
+                <button class="w-full bg-espresso text-white rounded-full py-[15px] text-[15px] font-semibold">ব্যাগে যোগ করুন</button>
+            </form>
+        </template>
+        <template x-if="available < 1">
+            <a href="#" @click.prevent="openPanel = null; $dispatch('cart:toast', { type: 'error', msg: 'পণ্যটি এখন স্টকে নেই।' })"
+               class="flex-1 text-center bg-sand text-muted rounded-full py-[15px] text-[15px] font-semibold">স্টকে নেই</a>
+        </template>
     </div>
-    @endif
 </div>
 @endsection

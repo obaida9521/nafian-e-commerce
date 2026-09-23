@@ -14,7 +14,7 @@ class SettingsService
      * @var list<string>
      */
     private const SECRET_FIELDS = [
-        'fb_token', 'secret_key', 'client_secret', 'password',
+        'fb_token', 'tiktok_token', 'ga4_api_secret', 'secret_key', 'client_secret', 'password',
     ];
 
     /**
@@ -28,16 +28,31 @@ class SettingsService
             'support_email' => 'hello@nafian.com',
             'support_phone' => '+880 1700 000000',
             'currency' => 'BDT',
-            'delivery_inside' => 60,
-            'delivery_outside' => 120,
+            'store_address' => 'রোড ১১, বনানী, ঢাকা ১২১৩',
+            'delivery_inside' => 79,
+            'delivery_outside' => 149,
+            'free_delivery_threshold' => 3000,
+            'cod_enabled' => true,
+            'mobile_banking_enabled' => true,
+            'card_enabled' => true,
+            'order_sms' => true,
+            'low_stock_alert' => true,
             'logo' => null,
             'whatsapp' => '',
             'messenger' => '',
+            'instagram' => '',
+        ],
+        'campaign' => [
+            'enabled' => true,
+            'eyebrow' => 'সেপ্টেম্বর ক্যাম্পেইন',
+            'title' => 'দুটি নিলে দ্বিতীয়টিতে ৩০% ছাড়',
+            'body' => 'সব আতর ও স্প্রে পারফিউমে প্রযোজ্য। চেকআউটে কোড লিখুন, ছাড় নিজে থেকেই বসে যাবে।',
+            'coupon_code' => 'COMBO30',
         ],
         'pixels' => [
-            'fb_enabled' => false, 'fb_pixel' => '', 'fb_token' => '',
-            'ga4_enabled' => false, 'ga4' => '', 'gtm' => '',
-            'tiktok_enabled' => false, 'tiktok' => '',
+            'fb_enabled' => false, 'fb_pixel' => '', 'fb_token' => '', 'fb_test_code' => '',
+            'ga4_enabled' => false, 'ga4' => '', 'gtm' => '', 'ga4_api_secret' => '',
+            'tiktok_enabled' => false, 'tiktok' => '', 'tiktok_token' => '', 'tiktok_test_code' => '',
         ],
         'courier' => [
             'steadfast_enabled' => false, 'api_key' => '', 'secret_key' => '',

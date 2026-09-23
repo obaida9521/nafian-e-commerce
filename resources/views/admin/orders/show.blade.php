@@ -1,161 +1,188 @@
 @extends('layouts.admin')
-@section('title', 'Order detail')
-
-@php
-    $symbol = config('shop.currency_symbol');
-    $st = order_status_style($order->status->value);
-@endphp
+@section('title', 'অর্ডার '.$order->order_number)
 
 @section('content')
-<div class="max-w-[1280px] mx-auto">
-    <a href="{{ route('admin.orders.index') }}" class="text-[13px] text-gray-500 mb-3.5 inline-block">← All orders</a>
-
-    <div class="flex flex-wrap items-center justify-between gap-4 mb-4.5">
-        <div class="flex items-center gap-3">
-            <h2 class="text-2xl font-semibold font-mono">{{ $order->order_number }}</h2>
-            <span class="text-xs font-semibold px-2.5 py-1.5 rounded-full" style="background:{{ $st['bg'] }};color:{{ $st['color'] }};">{{ $order->status->label() }}</span>
-        </div>
-        <div class="flex items-center gap-2.5">
-            <button onclick="window.print()" class="h-[38px] px-4 border border-[#EADBC4] rounded-lg bg-white text-gray-700 text-[13px] font-semibold hover:border-wine-700">Print invoice</button>
-        </div>
+<div x-data="{ statusOpen: false, cancelOpen: false }">
+    <div class="text-[14px] text-muted">
+        <a href="{{ route('admin.orders.index') }}" class="hover:text-accent">অর্ডার</a>
+        <span class="mx-1.5">/</span><span class="text-ink">{{ bn_digits($order->order_number) }}</span>
     </div>
 
-    {{-- Fulfilment flow --}}
-    <div class="bg-white border border-[#EADBC4] rounded-xl p-6 mb-4.5">
-        <div class="flex items-start mb-5">
-            @foreach($flow as $i => $step)
-                <div class="flex flex-col items-center flex-1 text-center">
-                    <div class="flex items-center w-full">
-                        <span class="h-0.5 flex-1 {{ $i === 0 ? 'bg-transparent' : ($step['state'] === 'done' || $step['state'] === 'current' ? 'bg-wine-700' : 'bg-[#EADBC4]') }}"></span>
-                        @php
-                            $circle = match($step['state']) {
-                                'done' => 'bg-wine-700 border-wine-700 text-white',
-                                'current' => 'bg-white border-wine-700 text-wine-700 ring-4 ring-wine-700/10',
-                                'halted' => 'bg-gray-100 border-gray-200 text-gray-400',
-                                default => 'bg-white border-[#EADBC4] text-gray-400',
-                            };
-                        @endphp
-                        <span class="w-[34px] h-[34px] rounded-full flex-none grid place-items-center border-2 text-[13px] font-bold {{ $circle }}">
-                            @if($step['state'] === 'done')
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg>
-                            @else
-                                {{ $i + 1 }}
+    <div class="mt-2.5 flex justify-between items-end gap-3.5 flex-wrap">
+        <div>
+            <h1 class="font-display text-[28px] sm:text-[32px]">{{ bn_digits($order->order_number) }}</h1>
+            <div class="mt-1 text-[14.5px] text-muted">
+                {{ bn_date($order->created_at) }}, {{ bn_time($order->created_at) }} · {{ $order->payment_method->labelBn() }}
+            </div>
+        </div>
+        <div class="flex gap-2.5 flex-wrap items-center">
+            <x-admin.status-badge :status="$order->status" class="!px-[18px] !py-2.5 !text-[14px]" />
+            <a href="{{ route('admin.orders.invoice', $order) }}" target="_blank" class="inline-flex items-center gap-1.5 bg-white rounded-full px-5 py-2.5 text-[14px] font-medium"><x-ui.icon name="printer" :size="16" />ইনভয়েস প্রিন্ট</a>
+            @adminCan('orders')
+                @if($nextStatuses)
+                    <div class="relative" @click.outside="statusOpen = false">
+                        <button @click="statusOpen = ! statusOpen" class="inline-flex items-center gap-1.5 bg-mocha text-white rounded-full px-5 py-2.5 text-[14px] font-medium"><x-ui.icon name="refresh" :size="16" />অবস্থা বদলান<x-ui.icon name="chevron-down" :size="15" /></button>
+                        <div x-show="statusOpen" x-cloak x-transition.opacity class="absolute right-0 mt-2 w-56 bg-white rounded-2xl p-2 z-20 shadow-[0_18px_40px_-16px_rgba(36,28,26,.45)]">
+                            @foreach($nextStatuses as $next)
+                                @continue($next === \App\Enums\OrderStatus::Cancelled)
+                                <form method="POST" action="{{ route('admin.orders.update-status', $order) }}">
+                                    @csrf @method('PATCH')
+                                    <input type="hidden" name="status" value="{{ $next->value }}">
+                                    <button class="w-full text-left px-3.5 py-2.5 rounded-xl text-[14.5px] hover:bg-canvas flex items-center gap-2"><x-ui.icon name="arrow-right" :size="15" />{{ $next->labelBn() }} হিসেবে চিহ্নিত করুন</button>
+                                </form>
+                            @endforeach
+                            @if($cancellable)
+                                <button @click="cancelOpen = true; statusOpen = false" class="w-full text-left px-3.5 py-2.5 rounded-xl text-[14.5px] text-rose hover:bg-rose-soft flex items-center gap-2"><x-ui.icon name="x-circle" :size="15" />অর্ডার বাতিল করুন</button>
                             @endif
-                        </span>
-                        <span class="h-0.5 flex-1 {{ $i === count($flow) - 1 ? 'bg-transparent' : ($step['state'] === 'done' ? 'bg-wine-700' : 'bg-[#EADBC4]') }}"></span>
-                    </div>
-                    <div class="text-[13px] mt-2.5 {{ $step['state'] === 'current' ? 'font-semibold text-gray-900' : 'text-gray-500' }}">{{ $step['label'] }}</div>
-                </div>
-            @endforeach
-        </div>
-
-        <div class="flex items-center justify-between gap-4 border-t border-[#F6EAD8] pt-4.5 flex-wrap">
-            <div class="text-[13.5px] text-gray-500 flex items-center gap-2.5">
-                @if($order->status->isTerminal() && in_array($order->status->value, ['cancelled','refunded']))
-                    <span class="text-xs font-semibold px-2.5 py-1 rounded-full" style="background:{{ $st['bg'] }};color:{{ $st['color'] }};">{{ $order->status->label() }}</span>
-                @endif
-                <span>
-                    @switch($order->status->value)
-                        @case('delivered') Order completed and delivered. @break
-                        @case('cancelled') Order was cancelled. @break
-                        @case('refunded') Order was refunded. @break
-                        @default Currently {{ strtolower($order->status->label()) }} — move it to the next stage when ready.
-                    @endswitch
-                </span>
-            </div>
-            <div class="flex items-center gap-2.5" x-data="{ cancelOpen: false }">
-                @if($cancellable)
-                    <button @click="cancelOpen = true" class="h-[42px] px-4.5 border border-red-300 rounded-lg bg-white text-red-600 text-sm font-semibold hover:bg-red-50">Cancel order</button>
-                @endif
-
-                @if($primaryAction && $primaryAction->value === 'refunded')
-                    <form method="POST" action="{{ route('admin.orders.update-status', $order) }}">
-                        @csrf @method('PATCH')
-                        <input type="hidden" name="status" value="refunded">
-                        <button class="h-[42px] px-4.5 border border-[#EADBC4] rounded-lg bg-white text-gray-700 text-sm font-semibold hover:border-wine-700">Issue refund</button>
-                    </form>
-                @elseif($primaryAction)
-                    <form method="POST" action="{{ route('admin.orders.update-status', $order) }}">
-                        @csrf @method('PATCH')
-                        <input type="hidden" name="status" value="{{ $primaryAction->value }}">
-                        <button class="h-[42px] px-6 rounded-lg bg-wine-700 hover:bg-[#4d141e] text-white text-sm font-semibold flex items-center gap-2">
-                            Mark as {{ $primaryAction->label() }}
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-                        </button>
-                    </form>
-                @endif
-
-                {{-- Cancel modal --}}
-                <div x-show="cancelOpen" x-cloak class="fixed inset-0 z-[75] flex items-center justify-center">
-                    <div @click="cancelOpen = false" class="absolute inset-0 bg-[#3c1018]/40"></div>
-                    <form method="POST" action="{{ route('admin.orders.cancel', $order) }}" class="relative bg-white rounded-[14px] w-[440px] max-w-[92vw] p-6.5 shadow-2xl">
-                        @csrf
-                        <div class="text-lg font-semibold mb-1">Cancel order</div>
-                        <div class="text-[13px] text-gray-500 mb-4">Stock will be released. This cannot be undone.</div>
-                        <textarea name="cancelled_reason" rows="3" required placeholder="Reason for cancellation…" class="w-full border border-[#EADBC4] rounded-[7px] px-3.5 py-2.5 text-sm outline-none focus:border-wine-700 mb-4"></textarea>
-                        <div class="flex justify-end gap-2.5">
-                            <button type="button" @click="cancelOpen = false" class="h-[42px] px-5 border border-[#EADBC4] rounded-lg bg-white text-gray-700 text-sm font-semibold">Keep order</button>
-                            <button class="h-[42px] px-5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold">Confirm cancel</button>
                         </div>
-                    </form>
-                </div>
-            </div>
+                    </div>
+                @endif
+            @endadminCan
         </div>
     </div>
 
-    <div class="grid lg:grid-cols-[1.6fr_1fr] gap-4.5 items-start">
-        {{-- Items --}}
-        <div class="bg-white border border-[#EADBC4] rounded-xl overflow-hidden">
-            <div class="px-5 py-4 border-b border-[#EFE2CE] text-[15px] font-semibold">Items</div>
-            @foreach($order->items as $item)
-                @php $itemImg = $item->variant?->product?->getFirstMediaUrl('images', 'thumb') ?: $item->variant?->product?->getFirstMediaUrl('images'); @endphp
-                <div class="flex gap-3 items-center px-5 py-3.5 border-b border-[#F6EAD8]">
-                    <div class="w-[46px] h-[56px] rounded-[7px] flex-none overflow-hidden" style="background:linear-gradient(155deg,{{ $item->variant?->product?->tone ?? '#C9B49A' }},{{ $item->variant?->product?->tone2 ?? '#A98F6E' }});">
-                        @if($itemImg)<img src="{{ $itemImg }}" alt="{{ $item->product_name }}" class="w-full h-full object-cover">@endif
-                    </div>
-                    <div class="flex-1"><div class="text-sm font-semibold">{{ $item->product_name }}</div><div class="text-xs text-gray-400">{{ $item->variant_name }} · <span class="font-mono">{{ $item->sku }}</span></div></div>
-                    <span class="text-[13px] text-gray-500">{{ $symbol }}{{ number_format($item->unit_price, 0) }} × {{ $item->quantity }}</span>
-                    <span class="text-sm font-semibold w-16 text-right">{{ $symbol }}{{ number_format($item->line_total, 0) }}</span>
+    <div class="mt-5 grid desk:grid-cols-[1fr_360px] gap-[18px] items-start">
+        <div class="flex flex-col gap-[18px]">
+            {{-- Items --}}
+            <x-admin.card title="পণ্য">
+                <div class="mt-4 hidden sm:grid grid-cols-[1fr_110px_90px_110px] gap-3 px-2.5 pb-2.5 text-[13px] font-semibold text-muted">
+                    <div>পণ্য</div><div>দাম</div><div>পরিমাণ</div><div>মোট</div>
                 </div>
-            @endforeach
-            <div class="px-5 py-4 flex flex-col gap-2 text-sm">
-                <div class="flex justify-between text-gray-500"><span>Subtotal</span><span class="text-gray-900">{{ $symbol }}{{ number_format($order->subtotal, 0) }}</span></div>
-                @if($order->discount_amount > 0)
-                    <div class="flex justify-between text-green-600"><span>Discount {{ $order->coupon_code ? '('.$order->coupon_code.')' : '' }}</span><span>−{{ $symbol }}{{ number_format($order->discount_amount, 0) }}</span></div>
-                @endif
-                <div class="flex justify-between text-gray-500"><span>Delivery</span><span class="text-gray-900">{{ $symbol }}{{ number_format($order->delivery_charge, 0) }}</span></div>
-                <div class="flex justify-between font-semibold text-base border-t border-[#EFE2CE] pt-2.5"><span>Total</span><span>{{ $symbol }}{{ number_format($order->total_amount, 0) }}</span></div>
-            </div>
+                @foreach($order->items as $item)
+                    <div @class([
+                        'grid grid-cols-2 sm:grid-cols-[1fr_110px_90px_110px] gap-x-3 gap-y-1.5 items-center px-2.5 py-3.5 rounded-2xl',
+                        'bg-canvas' => $loop->even,
+                    ])>
+                        <div class="flex gap-3 items-center max-sm:col-span-2">
+                            <x-ui.product-image :product="$item->variant?->product" :variant="$item->variant" class="w-11 h-[52px] rounded-[9px] flex-none" />
+                            <div class="min-w-0">
+                                <div class="text-[15px] font-semibold truncate">{{ $item->product_name }}</div>
+                                <div class="text-[13px] text-muted">SKU {{ $item->sku }} · {{ bn_digits($item->variant_name) }}</div>
+                            </div>
+                        </div>
+                        <div class="text-[14.5px]"><span class="sm:hidden text-muted">দাম </span>{{ bn_price($item->unit_price) }}</div>
+                        <div class="text-[14.5px]"><span class="sm:hidden text-muted">পরিমাণ </span>{{ bn_digits($item->quantity) }}</div>
+                        <div class="text-[14.5px] font-semibold max-sm:col-span-2 max-sm:text-right">{{ bn_price($item->line_total) }}</div>
+                    </div>
+                @endforeach
+
+                <div class="nf-line my-[18px]"></div>
+                <div class="flex flex-col gap-2.5 text-[15px] text-cocoa max-w-[340px] ml-auto">
+                    <div class="flex justify-between"><span>সাবটোটাল</span><span class="text-ink">{{ bn_price($order->subtotal) }}</span></div>
+                    @if($order->discount_amount > 0)
+                        <div class="flex justify-between"><span>ছাড়@if($order->coupon_code) ({{ $order->coupon_code }})@endif</span><span class="text-accent">−{{ bn_price($order->discount_amount) }}</span></div>
+                    @endif
+                    <div class="flex justify-between"><span>ডেলিভারি</span><span class="text-ink">{{ bn_price($order->delivery_charge) }}</span></div>
+                    <div class="flex justify-between text-[17px] font-semibold text-ink"><span>সর্বমোট</span><span>{{ bn_price($order->total_amount) }}</span></div>
+                </div>
+            </x-admin.card>
+
+            {{-- History + internal note --}}
+            <x-admin.card title="অর্ডারের ইতিহাস">
+                <div class="mt-4 flex flex-col gap-3.5">
+                    @foreach($timeline as $entry)
+                        <div class="flex gap-3.5">
+                            <span class="w-2.5 h-2.5 rounded-full bg-mocha mt-1.5 flex-none"></span>
+                            <div>
+                                <div class="text-[15px] font-semibold">{{ $entry['label'] }}</div>
+                                <div class="text-[13.5px] text-muted">
+                                    {{ bn_date($entry['at'], 'j M') }}, {{ bn_time($entry['at']) }}@if($entry['note']) · {{ $entry['note'] }}@endif
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
+                <div class="nf-line my-[18px]"></div>
+                <form method="POST" action="{{ route('admin.orders.details', $order) }}">
+                    @csrf @method('PATCH')
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="nf-label" for="rider-name">রাইডারের নাম</label>
+                            <input id="rider-name" name="rider_name" value="{{ old('rider_name', $order->rider_name) }}" class="nf-input nf-input-soft" placeholder="শাকিল আহমেদ">
+                        </div>
+                        <div>
+                            <label class="nf-label" for="rider-phone">রাইডারের নম্বর</label>
+                            <input id="rider-phone" name="rider_phone" value="{{ old('rider_phone', $order->rider_phone) }}" class="nf-input nf-input-soft" placeholder="০১৯০০ ১১২ ২৩৩">
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <label class="nf-label" for="admin-notes">অভ্যন্তরীণ নোট</label>
+                        <textarea id="admin-notes" name="admin_notes" rows="2" class="nf-input nf-input-soft" placeholder="যেমন: গ্রাহক বিকেল ৫টার পরে ডেলিভারি চেয়েছেন।">{{ old('admin_notes', $order->admin_notes) }}</textarea>
+                    </div>
+                    @adminCan('orders')
+                        <button class="mt-4 inline-flex items-center gap-1.5 bg-mocha text-white rounded-full px-6 py-3 text-[14px] font-semibold"><x-ui.icon name="check" :size="15" />সংরক্ষণ করুন</button>
+                    @endadminCan
+                </form>
+            </x-admin.card>
         </div>
 
-        {{-- Sidebar --}}
-        <div class="flex flex-col gap-4">
-            <div class="bg-white border border-[#EADBC4] rounded-xl p-4.5"><div class="text-[13px] font-semibold mb-2.5">Customer</div><div class="text-sm font-semibold">{{ $order->user?->name ?? $order->shipping_name }}</div><div class="text-[13px] text-gray-500">{{ $order->user?->email ?? $order->guest_email }}</div></div>
-            <div class="bg-white border border-[#EADBC4] rounded-xl p-4.5"><div class="text-[13px] font-semibold mb-2.5">Shipping address</div><div class="text-[13px] text-gray-500 leading-relaxed">{{ $order->shipping_name }}<br>{{ $order->shipping_phone }}<br>{{ $order->shipping_address }}<br>{{ $order->shipping_city }}, {{ $order->shipping_district }}</div></div>
-            <div class="bg-white border border-[#EADBC4] rounded-xl p-4.5">
-                <div class="text-[13px] font-semibold mb-2.5">Payment</div>
-                <div class="text-sm">{{ $order->payment_method->label() }}</div>
-                @foreach($order->payments as $payment)
-                    <div class="flex items-center justify-between text-[13px] text-gray-500 mt-2">
-                        <span>{{ $symbol }}{{ number_format($payment->amount, 0) }}</span>
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full" style="background:{{ order_status_style($payment->status->value)['bg'] }};color:{{ order_status_style($payment->status->value)['color'] }};">{{ $payment->status->label() }}</span>
+        <div class="flex flex-col gap-[18px]">
+            <x-admin.card title="গ্রাহক">
+                <div class="mt-3 text-[15px] leading-[1.9] text-bark">
+                    {{ $order->shipping_name }}<br>
+                    <a href="tel:{{ $order->shipping_phone }}" class="hover:text-accent">{{ bn_phone($order->shipping_phone) }}</a><br>
+                    @if($order->guest_email || $order->user?->email)
+                        <span class="text-muted">{{ $order->guest_email ?: $order->user?->email }}</span><br>
+                    @endif
+                    <span class="text-muted">আগে {{ bn_digits($previousOrders) }}টি অর্ডার</span>
+                </div>
+
+                <div class="nf-line my-[18px]"></div>
+                <div class="text-[15.5px] font-semibold">ডেলিভারি ঠিকানা</div>
+                <div class="mt-2.5 text-[14.5px] leading-[1.9] text-cocoa">
+                    {{ $order->shipping_address }}<br>
+                    {{ collect([$order->shipping_area, $order->shipping_city, bn_digits($order->shipping_postcode)])->filter()->implode(', ') }}<br>
+                    <span class="text-muted">{{ $order->delivery_zone === 'outside' ? 'ঢাকার বাইরে' : 'ঢাকার ভেতরে' }}</span>
+                </div>
+
+                <div class="nf-line my-[18px]"></div>
+                <div class="text-[15.5px] font-semibold">পেমেন্ট</div>
+                <div class="mt-2.5 flex justify-between items-center text-[14.5px] text-cocoa">
+                    <span>{{ $order->payment_method->labelBn() }}</span>
+                    @php $payment = $order->payments->first(); @endphp
+                    <span class="bg-clay-soft rounded-full px-3 py-1.5 text-[13px] font-semibold text-bark">
+                        {{ $payment && $payment->status === \App\Enums\PaymentStatus::Paid ? 'পরিশোধিত' : 'বকেয়া' }}
+                    </span>
+                </div>
+
+                @if($order->notes)
+                    <div class="nf-line my-[18px]"></div>
+                    <div class="text-[15.5px] font-semibold">গ্রাহকের নোট</div>
+                    <p class="mt-2 text-[14.5px] leading-[1.8] text-cocoa">{{ $order->notes }}</p>
+                @endif
+            </x-admin.card>
+
+            @if($order->rider_name || $order->rider_phone)
+                <x-admin.card>
+                    <div class="text-[15.5px] font-semibold">রাইডার</div>
+                    <div class="mt-3 text-[14.5px] leading-[1.9] text-bark">
+                        {{ $order->rider_name }}<br>{{ bn_phone($order->rider_phone) }}
                     </div>
-                @endforeach
-            </div>
-            <div class="bg-white border border-[#EADBC4] rounded-xl p-4.5">
-                <div class="text-[13px] font-semibold mb-3.5">Timeline</div>
-                @foreach($timeline as $t)
-                    <div class="flex gap-3 items-center py-1.5">
-                        <span class="w-2.5 h-2.5 rounded-full flex-none" style="background:{{ $t['done'] ? '#691d2a' : '#E3D8C4' }};"></span>
-                        <span class="text-[13px] {{ $t['done'] ? 'text-gray-900' : 'text-gray-400' }}">{{ $t['label'] }}</span>
-                        @if($t['at'])<span class="text-xs text-gray-400 ml-auto">{{ $t['at'] }}</span>@endif
-                    </div>
-                @endforeach
-            </div>
-            @if($order->cancelled_reason)
-                <div class="bg-red-50 border border-red-200 rounded-xl p-4.5 text-sm"><div class="font-semibold text-red-800 mb-1">Cancellation reason</div><div class="text-red-700">{{ $order->cancelled_reason }}</div></div>
+                    @if($order->rider_phone)
+                        <a href="sms:{{ $order->rider_phone }}?body={{ rawurlencode('অর্ডার '.$order->order_number.' · '.$order->shipping_address) }}"
+                           class="mt-3.5 flex items-center justify-center gap-1.5 bg-accent-soft text-accent rounded-full py-3.5 text-[14.5px] font-semibold"><x-ui.icon name="message" :size="16" />এসএমএস পাঠান</a>
+                    @endif
+                </x-admin.card>
             @endif
         </div>
     </div>
+
+    {{-- Cancel dialog --}}
+    @adminCan('orders')
+        <div x-show="cancelOpen" x-cloak class="fixed inset-0 z-[80] grid place-items-center bg-[#1A1413]/50 px-5" @click.self="cancelOpen = false">
+            <form method="POST" action="{{ route('admin.orders.cancel', $order) }}" class="bg-white rounded-[22px] p-6 w-full max-w-[420px]">
+                @csrf
+                <div class="text-[18px] font-semibold">অর্ডার বাতিল করুন</div>
+                <p class="mt-1.5 text-[14.5px] text-muted">বাতিল করলে রিজার্ভ করা স্টক ছেড়ে দেওয়া হবে।</p>
+                <label class="nf-label mt-4" for="cancel-reason">কারণ</label>
+                <textarea id="cancel-reason" name="cancelled_reason" rows="3" required class="nf-input nf-input-soft" placeholder="যেমন: গ্রাহক ফোনে বাতিল করেছেন"></textarea>
+                <div class="mt-4 flex gap-2.5">
+                    <button type="button" @click="cancelOpen = false" class="inline-flex items-center justify-center gap-1.5 flex-1 bg-hair rounded-full py-3 text-[14.5px] font-semibold"><x-ui.icon name="arrow-left" :size="15" />ফিরে যান</button>
+                    <button class="inline-flex items-center justify-center gap-1.5 flex-1 bg-rose text-white rounded-full py-3 text-[14.5px] font-semibold"><x-ui.icon name="x-circle" :size="15" />বাতিল করুন</button>
+                </div>
+            </form>
+        </div>
+    @endadminCan
 </div>
 @endsection

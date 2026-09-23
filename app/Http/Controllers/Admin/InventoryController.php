@@ -45,6 +45,6 @@ class InventoryController extends Controller
             auth('admin')->user(),
         );
 
-        return redirect()->route('admin.inventory.index')->with('success', "Stock adjusted for {$variant->sku}.");
+        return redirect()->route('admin.inventory.index')->with('success', "{$variant->sku}-এর স্টক আপডেট হয়েছে।");
     }
 }

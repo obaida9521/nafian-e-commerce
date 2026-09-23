@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ExpenseController;
 use App\Http\Controllers\Admin\InventoryController;
+use App\Http\Controllers\Admin\MediaController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\PosController;
 use App\Http\Controllers\Admin\ProductController;
@@ -19,9 +20,14 @@ use App\Http\Controllers\Storefront\AccountController;
 use App\Http\Controllers\Storefront\CartController;
 use App\Http\Controllers\Storefront\CheckoutController;
 use App\Http\Controllers\Storefront\HomeController;
+use App\Http\Controllers\Storefront\OffersController;
+use App\Http\Controllers\Storefront\PageController;
 use App\Http\Controllers\Storefront\ProductController as StoreProductController;
+use App\Http\Controllers\Storefront\RestockRequestController;
+use App\Http\Controllers\Storefront\SearchController;
 use App\Http\Controllers\Storefront\ShopController;
 use App\Http\Controllers\Storefront\StoreOrderController;
+use App\Http\Controllers\Storefront\SubscriberController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -32,11 +38,19 @@ use Illuminate\Support\Facades\Route;
 Route::name('store.')->group(function () {
     Route::get('/', [HomeController::class, 'index'])->name('home');
 
+    Route::get('/offers', [OffersController::class, 'index'])->name('offers');
+    Route::get('/page/{slug}', [PageController::class, 'show'])->name('page');
+    Route::get('/search/suggest', [SearchController::class, 'suggest'])->middleware('throttle:60,1')->name('search.suggest');
+    Route::post('/subscribe', [SubscriberController::class, 'store'])->middleware('throttle:10,1')->name('subscribe');
+
     Route::get('/shop', [ShopController::class, 'index'])->name('shop');
     Route::get('/shop/{category:slug}', [ShopController::class, 'index'])->name('shop.category');
     Route::get('/product/{product:slug}', [StoreProductController::class, 'show'])->name('product');
+    Route::get('/product/{product:slug}/reviews', [StoreProductController::class, 'reviews'])->name('product.reviews');
     Route::post('/product/{product:slug}/reviews', [StoreProductController::class, 'storeReview'])
         ->middleware('auth:web')->name('product.review');
+    Route::post('/product/{product:slug}/restock', [RestockRequestController::class, 'store'])
+        ->middleware('throttle:10,1')->name('product.restock');
 
     // Cart (session)
     Route::get('/cart', [CartController::class, 'index'])->name('cart');
@@ -53,7 +67,8 @@ Route::name('store.')->group(function () {
 
     // Guest order tracking (public)
     Route::get('/track', [StoreOrderController::class, 'trackForm'])->name('track');
-    Route::post('/track', [StoreOrderController::class, 'track'])->name('track.lookup');
+    Route::post('/track', [StoreOrderController::class, 'track'])->middleware('throttle:20,1')->name('track.lookup');
+    Route::post('/track/{order:order_number}/cancel', [StoreOrderController::class, 'cancel'])->name('track.cancel');
 
     // Account (auth: web guard)
     Route::middleware('auth:web')->prefix('account')->name('account.')->group(function () {
@@ -108,6 +123,11 @@ Route::prefix('admin')->name('admin.')->middleware(['admin.auth', 'admin.perm'])
     Route::resource('products.variants', VariantController::class)->shallow();
 
     // Categories
+    // Media library (all images; also feeds the picker modal as JSON)
+    Route::get('media', [MediaController::class, 'index'])->name('media.index');
+    Route::post('media', [MediaController::class, 'store'])->name('media.store');
+    Route::delete('media/{key}', [MediaController::class, 'destroy'])->where('key', 'media:[0-9]+')->name('media.destroy');
+
     Route::patch('categories/{category}/home', [CategoryController::class, 'toggleHome'])->name('categories.toggle-home');
     Route::resource('categories', CategoryController::class);
 
@@ -116,6 +136,8 @@ Route::prefix('admin')->name('admin.')->middleware(['admin.auth', 'admin.perm'])
     Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
     Route::post('orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
+    Route::patch('orders/{order}/details', [OrderController::class, 'updateDetails'])->name('orders.details');
+    Route::get('orders/{order}/invoice', [OrderController::class, 'invoice'])->name('orders.invoice');
 
     // POS (point of sale)
     Route::get('pos', [PosController::class, 'index'])->name('pos.index');
@@ -147,4 +169,5 @@ Route::prefix('admin')->name('admin.')->middleware(['admin.auth', 'admin.perm'])
     Route::put('settings/general', [SettingsController::class, 'updateGeneral'])->name('settings.general');
     Route::put('settings/pixels', [SettingsController::class, 'updatePixels'])->name('settings.pixels');
     Route::put('settings/courier', [SettingsController::class, 'updateCourier'])->name('settings.courier');
+    Route::put('settings/campaign', [SettingsController::class, 'updateCampaign'])->name('settings.campaign');
 });

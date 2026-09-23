@@ -67,7 +67,7 @@ class ExpenseController extends Controller
             "Recorded expense {$expense->title} (".shop_price($expense->amount).')',
         );
 
-        return redirect()->route('admin.expenses.index')->with('success', 'Expense recorded.');
+        return redirect()->route('admin.expenses.index')->with('success', 'খরচ যোগ হয়েছে।');
     }
 
     public function update(StoreExpenseRequest $request, Expense $expense): RedirectResponse
@@ -82,7 +82,7 @@ class ExpenseController extends Controller
             "Updated expense {$expense->title}",
         );
 
-        return redirect()->route('admin.expenses.index')->with('success', 'Expense updated.');
+        return redirect()->route('admin.expenses.index')->with('success', 'খরচ আপডেট হয়েছে।');
     }
 
     public function destroy(Expense $expense): RedirectResponse
@@ -97,6 +97,6 @@ class ExpenseController extends Controller
             "Deleted expense {$expense->title}",
         );
 
-        return redirect()->route('admin.expenses.index')->with('success', 'Expense deleted.');
+        return redirect()->route('admin.expenses.index')->with('success', 'খরচ মুছে ফেলা হয়েছে।');
     }
 }

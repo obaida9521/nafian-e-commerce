@@ -16,7 +16,7 @@ class CouponService
      *
      * @throws CouponException
      */
-    public function validate(string $code, float $orderAmount, ?User $user = null): Coupon
+    public function validate(string $code, float $orderAmount, ?User $user = null, ?int $unitCount = null): Coupon
     {
         $coupon = Coupon::where('code', $code)->first();
 
@@ -42,6 +42,10 @@ class CouponService
             throw CouponException::usageLimitReached();
         }
 
+        if ($coupon->isSecondItem() && $unitCount !== null && $unitCount < 2) {
+            throw CouponException::needsTwoItems();
+        }
+
         if ($orderAmount < (float) $coupon->min_order_amount) {
             throw CouponException::minimumNotMet((float) $coupon->min_order_amount);
         }
@@ -51,13 +55,22 @@ class CouponService
 
     /**
      * Calculate the discount amount for a coupon against a subtotal.
+     *
+     * @param  list<float>  $unitPrices  one entry per unit in the cart (needed for second-item coupons)
      */
-    public function calculateDiscount(Coupon $coupon, float $subtotal): float
+    public function calculateDiscount(Coupon $coupon, float $subtotal, array $unitPrices = []): float
     {
-        if ($coupon->isPercentage()) {
+        if ($coupon->isSecondItem()) {
+            sort($unitPrices);
+            $discount = count($unitPrices) >= 2 ? $unitPrices[0] * ((float) $coupon->value / 100) : 0.0;
+        } elseif ($coupon->isPercentage()) {
             $discount = $subtotal * ((float) $coupon->value / 100);
         } else {
             $discount = (float) $coupon->value;
+        }
+
+        if ($coupon->max_discount_amount !== null) {
+            $discount = min($discount, (float) $coupon->max_discount_amount);
         }
 
         return round(min($discount, $subtotal), 2);

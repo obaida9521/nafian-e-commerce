@@ -4,6 +4,9 @@ import Alpine from 'alpinejs';
 import collapse from '@alpinejs/collapse';
 import focus from '@alpinejs/focus';
 import Chart from 'chart.js/auto';
+import { initNfSelect } from './nf-select';
+import { initImageEditor } from './nf-image-editor';
+import './media-picker';
 
 Alpine.plugin(collapse);
 Alpine.plugin(focus);
@@ -11,10 +14,104 @@ Alpine.plugin(focus);
 window.Alpine = Alpine;
 window.Chart = Chart;
 
+const BN_DIGITS = '০১২৩৪৫৬৭৮৯';
+
+/** 1450 → "১,৪৫০" */
+window.bnNumber = (value) =>
+    Math.round(Number(value) || 0)
+        .toLocaleString('en-US')
+        .replace(/[0-9]/g, (d) => BN_DIGITS[d]);
+
+/** "১৭" → "17" */
+window.latinDigits = (value) => String(value ?? '').replace(/[০-৯]/g, (d) => String(BN_DIGITS.indexOf(d)));
+
+const RECENT_KEY = 'nf-recent-searches';
+
+const readRecent = () => {
+    try {
+        return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]').slice(0, 6);
+    } catch {
+        return [];
+    }
+};
+
+// Search overlay / dropdown: live suggestions plus recent searches kept in this browser.
+Alpine.data('nfSearch', (suggestUrl, shopUrl) => ({
+    q: '',
+    open: false,
+    loading: false,
+    suggestions: [],
+    products: [],
+    recent: readRecent(),
+    timer: null,
+
+    fetchResults() {
+        clearTimeout(this.timer);
+        const term = this.q.trim();
+        if (!term) {
+            this.suggestions = [];
+            this.products = [];
+            return;
+        }
+        this.timer = setTimeout(async () => {
+            this.loading = true;
+            try {
+                const res = await fetch(`${suggestUrl}?q=${encodeURIComponent(term)}`, { headers: { Accept: 'application/json' } });
+                const data = await res.json();
+                this.suggestions = data.suggestions ?? [];
+                this.products = data.products ?? [];
+            } catch {
+                this.products = [];
+            } finally {
+                this.loading = false;
+            }
+        }, 180);
+    },
+
+    highlight(text) {
+        const term = this.q.trim();
+        const safe = String(text).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+        if (!term) return safe;
+        const i = safe.toLowerCase().indexOf(term.toLowerCase());
+        if (i < 0) return safe;
+        return `${safe.slice(0, i)}<b class="font-semibold">${safe.slice(i, i + term.length)}</b>${safe.slice(i + term.length)}`;
+    },
+
+    remember(term) {
+        term = String(term).trim();
+        if (!term) return;
+        this.recent = [term, ...this.recent.filter((t) => t !== term)].slice(0, 6);
+        try {
+            localStorage.setItem(RECENT_KEY, JSON.stringify(this.recent));
+        } catch {
+            // Private mode — recent searches simply aren't kept.
+        }
+    },
+
+    go(term) {
+        this.remember(term);
+        window.location = `${shopUrl}?q=${encodeURIComponent(term)}`;
+    },
+
+    submit() {
+        if (this.q.trim()) this.go(this.q);
+    },
+}));
+
 Alpine.start();
 
+// Styled dropdowns for every <select> (see nf-select.js).
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initNfSelect);
+} else {
+    initNfSelect();
+}
+
+// Crop / resize before upload for <input type=file data-image-editor> (see nf-image-editor.js).
+initImageEditor();
+
 // AJAX cart: submit any .js-cart-form without a full page reload, then swap the
-// drawer, update the badge, toast, and open the bag — preserving scroll position.
+// drawer (and the bag page when open), update the badges, toast, and open the bag.
 document.addEventListener('submit', async (e) => {
     const form = e.target.closest('.js-cart-form');
     if (!form) return;
@@ -34,6 +131,13 @@ document.addEventListener('submit', async (e) => {
         return;
     }
 
+    if (data.redirect) {
+        window.location = data.redirect;
+        return;
+    }
+
+    window.nfFlush?.(data.analytics);
+
     try {
         const container = document.getElementById('cart-contents');
         if (container && typeof data.html === 'string') {
@@ -41,167 +145,25 @@ document.addEventListener('submit', async (e) => {
             window.Alpine?.initTree(container);
         }
 
-        const badge = document.getElementById('cart-count');
-        if (badge) {
-            badge.textContent = data.count;
-            badge.classList.toggle('hidden', !data.count);
+        const page = document.getElementById('bag-page');
+        if (page && typeof data.page_html === 'string') {
+            page.innerHTML = data.page_html;
+            window.Alpine?.initTree(page);
         }
+
+        document.querySelectorAll('.js-cart-count').forEach((badge) => {
+            const count = String(data.count ?? 0);
+            badge.textContent = badge.hasAttribute('data-bn') ? count.replace(/[0-9]/g, (d) => BN_DIGITS[d]) : count;
+            if (badge.hasAttribute('data-hide-empty')) badge.classList.toggle('hidden', count === '0');
+        });
 
         if (data.message) {
             window.dispatchEvent(new CustomEvent('cart:toast', { detail: { type: data.type, msg: data.message } }));
         }
-        if (data.open) window.dispatchEvent(new CustomEvent('cart:open'));
+        if (data.open && !page) window.dispatchEvent(new CustomEvent('cart:open'));
         window.dispatchEvent(new CustomEvent('cart-added'));
     } catch (err) {
         // DOM update failed after a successful request — don't re-POST (would double-add).
         console.error('cart UI update failed', err);
-    }
-});
-
-function renderReportCharts() {
-    const r = window.__report;
-    if (!r) return;
-
-    const revEl = document.getElementById('repRevenue');
-    if (revEl) {
-        new Chart(revEl, {
-            type: 'line',
-            data: {
-                labels: r.sales.labels,
-                datasets: [{
-                    label: 'Revenue', data: r.sales.revenue,
-                    borderColor: '#691d2a', backgroundColor: 'rgba(105,29,42,0.08)',
-                    fill: true, tension: 0.35, pointRadius: 0, borderWidth: 2,
-                }],
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true, ticks: { callback: (v) => r.symbol + v } }, x: { grid: { display: false } } },
-            },
-        });
-    }
-
-    const ordEl = document.getElementById('repOrders');
-    if (ordEl) {
-        new Chart(ordEl, {
-            type: 'bar',
-            data: {
-                labels: r.sales.labels,
-                datasets: [{ label: 'Orders', data: r.sales.orders, backgroundColor: '#D4A853', borderRadius: 4 }],
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } },
-            },
-        });
-    }
-
-    const payEl = document.getElementById('repPayment');
-    if (payEl) {
-        new Chart(payEl, {
-            type: 'doughnut',
-            data: {
-                labels: r.payment.labels,
-                datasets: [{ data: r.payment.values, backgroundColor: ['#691d2a', '#D4A853', '#C9B49A'], borderWidth: 0 }],
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false, cutout: '62%',
-                plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } },
-            },
-        });
-    }
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    renderReportCharts();
-
-    const data = window.__dashboard;
-    if (!data) return;
-
-    const salesEl = document.getElementById('salesChart');
-    if (salesEl) {
-        new Chart(salesEl, {
-            type: 'line',
-            data: {
-                labels: data.sales.labels,
-                datasets: [{
-                    label: 'Revenue',
-                    data: data.sales.revenue,
-                    borderColor: '#691d2a',
-                    backgroundColor: 'rgba(105,29,42,0.08)',
-                    fill: true,
-                    tension: 0.35,
-                    pointRadius: 3,
-                    pointBackgroundColor: '#691d2a',
-                }],
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: { beginAtZero: true, ticks: { callback: (v) => data.symbol + v } },
-                    x: { grid: { display: false } },
-                },
-            },
-        });
-    }
-
-    const pnlEl = document.getElementById('pnlChart');
-    if (pnlEl && data.pnl) {
-        new Chart(pnlEl, {
-            type: 'bar',
-            data: {
-                labels: data.pnl.labels,
-                datasets: [
-                    { type: 'bar', label: 'Revenue', data: data.pnl.revenue, backgroundColor: '#D4A853', borderRadius: 4, order: 2 },
-                    { type: 'bar', label: 'Expenses', data: data.pnl.expenses, backgroundColor: 'rgba(105,29,42,0.35)', borderRadius: 4, order: 2 },
-                    {
-                        type: 'line', label: 'Net profit', data: data.pnl.profit,
-                        borderColor: '#16a34a', backgroundColor: '#16a34a',
-                        tension: 0.35, pointRadius: 3, borderWidth: 2, order: 1,
-                        segment: { borderColor: (ctx) => ctx.p1.parsed.y < 0 ? '#dc2626' : '#16a34a' },
-                    },
-                ],
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: { mode: 'index', intersect: false },
-                plugins: {
-                    legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
-                    tooltip: { callbacks: { label: (c) => c.dataset.label + ': ' + data.symbol + Number(c.parsed.y).toLocaleString() } },
-                },
-                scales: {
-                    y: { beginAtZero: true, ticks: { callback: (v) => data.symbol + v } },
-                    x: { grid: { display: false } },
-                },
-            },
-        });
-    }
-
-    const statusEl = document.getElementById('statusChart');
-    if (statusEl) {
-        const labels = Object.keys(data.status);
-        const values = Object.values(data.status);
-        new Chart(statusEl, {
-            type: 'doughnut',
-            data: {
-                labels: labels.map((l) => l.charAt(0).toUpperCase() + l.slice(1)),
-                datasets: [{
-                    data: values,
-                    backgroundColor: labels.map((l) => data.statusColors[l] || '#9ca3af'),
-                    borderWidth: 0,
-                }],
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '62%',
-                plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } },
-            },
-        });
     }
 });
