@@ -208,6 +208,27 @@ class CatalogService
     }
 
     /**
+     * A page of the home "দেখতে থাকুন" feed: visible products in a random order that stays stable for `$seed`
+     * (so "load more" pages don't repeat), skipping the best sellers already shown above it.
+     *
+     * @return array{products: Collection<int, Product>, has_more: bool}
+     */
+    public function discover(int $seed, int $offset = 0, int $limit = 6): array
+    {
+        $products = $this->cardQuery()
+            ->whereNotIn('products.id', $this->bestSellers(4)->modelKeys())
+            ->inRandomOrder($seed)
+            ->offset($offset)
+            ->limit($limit + 1)
+            ->get();
+
+        return [
+            'products' => $products->take($limit)->values(),
+            'has_more' => $products->count() > $limit,
+        ];
+    }
+
+    /**
      * Products whose cheapest variant is discounted, biggest discount first.
      *
      * @return Collection<int, Product>

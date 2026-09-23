@@ -157,7 +157,7 @@
             $sizes = $product->sizeOptions();
         @endphp
         <a href="{{ route('admin.products.edit', $product) }}" class="bg-white rounded-[20px] p-[18px] flex gap-4 nf-shadow-soft">
-            <x-ui.product-image :product="$product" class="w-[78px] h-[92px] rounded-xl flex-none" />
+            <x-ui.product-image :product="$product" class="w-[78px] h-[78px] rounded-xl flex-none" />
             <div class="flex-1 min-w-0">
                 <div class="text-[16.5px] font-semibold truncate">{{ $product->name }}</div>
                 <div class="mt-0.5 text-[13.5px] text-muted truncate">

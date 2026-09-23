@@ -5,7 +5,7 @@
 <div class="flex flex-col gap-3.5">
     @foreach($order->items as $item)
         <div class="flex gap-3 items-center">
-            <x-ui.product-image :product="$item->variant?->product" :variant="$item->variant" class="w-[52px] h-[60px] rounded-[10px] flex-none" />
+            <x-ui.product-image :product="$item->variant?->product" :variant="$item->variant" class="w-[52px] h-[52px] rounded-[10px] flex-none" />
             <div class="flex-1 min-w-0">
                 <div class="text-[15px] font-semibold truncate">{{ $item->product_name }}</div>
                 <div class="text-[13.5px] text-muted">{{ bn_digits($item->variant_name) }} · {{ bn_digits($item->quantity) }}টি</div>

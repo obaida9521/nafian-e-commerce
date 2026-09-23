@@ -54,7 +54,7 @@
                         'bg-canvas' => $loop->even,
                     ])>
                         <div class="flex gap-3 items-center max-sm:col-span-2">
-                            <x-ui.product-image :product="$item->variant?->product" :variant="$item->variant" class="w-11 h-[52px] rounded-[9px] flex-none" />
+                            <x-ui.product-image :product="$item->variant?->product" :variant="$item->variant" class="w-11 h-11 rounded-[9px] flex-none" />
                             <div class="min-w-0">
                                 <div class="text-[15px] font-semibold truncate">{{ $item->product_name }}</div>
                                 <div class="text-[13px] text-muted">SKU {{ $item->sku }} · {{ bn_digits($item->variant_name) }}</div>

@@ -11,10 +11,13 @@
  * Phones (< 640px): bottom sheet with a title, matching the app-style layout.
  *
  * Opt out with `<select data-native>`; `multiple` / `size > 1` selects are left alone.
+ * Add `data-search` for a filter box on top of long lists (options can carry extra match text,
+ * e.g. an English name, in `data-search`).
  */
 
 const PHONE = window.matchMedia('(max-width: 639px)');
 const CHEVRON = '<svg class="nf-select-chevron" width="12" height="8" viewBox="0 0 12 8" aria-hidden="true"><path d="M1 1l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const SEARCH = '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-3.5-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 const CHECK = '<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 let uid = 0;
@@ -25,6 +28,8 @@ class NfSelect {
         this.select = select;
         this.id = `nf-select-${++uid}`;
         this.highlight = -1;
+        this.searchable = select.hasAttribute('data-search');
+        this.query = '';
 
         this.trigger = document.createElement('button');
         this.trigger.type = 'button';
@@ -107,7 +112,11 @@ class NfSelect {
         this.menu.className = this.phone ? 'nf-select-menu is-sheet' : 'nf-select-menu';
         this.menu.id = this.id;
         this.menu.setAttribute('role', 'listbox');
-        this.menu.addEventListener('mousedown', (e) => e.preventDefault()); // keep focus on the trigger
+        // Keep focus on the trigger (or the search box) while clicking options.
+        this.menu.addEventListener('mousedown', (e) => { if (!e.target.closest('.nf-select-search')) e.preventDefault(); });
+        this.buildHead();
+        this.list = document.createElement('div');
+        this.menu.append(this.list);
         document.body.append(this.menu);
         this.trigger.setAttribute('aria-expanded', 'true');
         this.trigger.setAttribute('aria-controls', this.id);
@@ -120,6 +129,48 @@ class NfSelect {
         window.addEventListener('resize', this.onReflow);
         window.addEventListener('scroll', this.onReflow, true);
         requestAnimationFrame(() => this.menu?.classList.add('is-open'));
+        // Phones: don't pop the keyboard over the sheet until the shopper taps the search box.
+        if (this.searchInput && !this.phone) this.searchInput.focus({ preventScroll: true });
+    }
+
+    /** Sticky top of the menu: the sheet grip + title on phones, and the search box when enabled. */
+    buildHead() {
+        this.searchInput = null;
+        if (!this.phone && !this.searchable) return;
+
+        const head = document.createElement('div');
+        head.className = 'nf-select-head';
+        if (this.phone) {
+            head.innerHTML = '<div class="nf-select-grip"></div><div class="nf-select-title"></div>';
+            head.querySelector('.nf-select-title').textContent = this.title();
+        }
+        if (this.searchable) {
+            const box = document.createElement('label');
+            box.className = 'nf-select-search';
+            box.innerHTML = `${SEARCH}<input type="search" autocomplete="off" enterkeyhint="done">`;
+            this.searchInput = box.querySelector('input');
+            this.searchInput.placeholder = 'খুঁজুন…';
+            this.searchInput.setAttribute('aria-controls', this.id);
+            this.searchInput.addEventListener('input', () => {
+                this.query = this.searchInput.value;
+                this.highlight = this.options().findIndex((option) => this.isShown(option));
+                this.render();
+            });
+            this.searchInput.addEventListener('keydown', (e) => {
+                if (['ArrowDown', 'ArrowUp', 'Enter', 'Escape', 'Tab'].includes(e.key)) this.onKeydown(e);
+            });
+            head.append(box);
+        }
+        this.menu.append(head);
+    }
+
+    /** Matches the search box against the option text, its `data-search` and its group label. */
+    isShown(option) {
+        if (option.hidden) return false;
+        const query = this.query.trim().toLowerCase();
+        if (!query) return true;
+        const group = option.parentElement.tagName === 'OPTGROUP' ? option.parentElement.label : '';
+        return `${option.label || option.text} ${option.dataset.search ?? ''} ${group}`.toLowerCase().includes(query);
     }
 
     close(refocus = true) {
@@ -130,7 +181,8 @@ class NfSelect {
         window.removeEventListener('scroll', this.onReflow, true);
         this.menu.remove();
         this.backdrop?.remove();
-        this.menu = this.backdrop = null;
+        this.menu = this.backdrop = this.list = this.searchInput = null;
+        this.query = '';
         this.trigger.setAttribute('aria-expanded', 'false');
         if (refocus) this.trigger.focus({ preventScroll: true });
     }
@@ -138,40 +190,47 @@ class NfSelect {
     render() {
         const options = this.options();
         const selectedIndex = this.select.selectedIndex;
-        const parts = [];
-
-        if (this.phone) {
-            parts.push(`<div class="nf-select-grip"></div><div class="nf-select-title"></div>`);
-        }
+        const fragment = document.createDocumentFragment();
+        let lastGroup = null;
 
         options.forEach((option, index) => {
+            if (!this.isShown(option)) return;
             const group = option.parentElement.tagName === 'OPTGROUP' ? option.parentElement : null;
-            if (group && group.firstElementChild === option) {
-                parts.push(`<div class="nf-select-group"></div>`);
+            if (group && group !== lastGroup) {
+                const heading = document.createElement('div');
+                heading.className = 'nf-select-group';
+                heading.textContent = group.label;
+                fragment.append(heading);
             }
-            if (option.hidden) return;
-            const classes = ['nf-select-option'];
-            if (index === selectedIndex) classes.push('is-selected');
-            if (index === this.highlight) classes.push('is-active');
-            if (option.disabled || group?.disabled) classes.push('is-disabled');
-            if (option.value === '') classes.push('is-placeholder');
-            parts.push(`<div class="${classes.join(' ')}" role="option" data-index="${index}" aria-selected="${index === selectedIndex}"${option.disabled ? ' aria-disabled="true"' : ''}><span></span>${CHECK}</div>`);
-        });
+            lastGroup = group;
 
-        this.menu.innerHTML = parts.join('');
-        // Text via textContent so option labels are never parsed as HTML.
-        if (this.phone) this.menu.querySelector('.nf-select-title').textContent = this.title();
-        this.menu.querySelectorAll('.nf-select-group').forEach((el, i) => {
-            el.textContent = this.select.querySelectorAll('optgroup')[i]?.label ?? '';
-        });
-        this.menu.querySelectorAll('.nf-select-option').forEach((el) => {
-            const option = options[+el.dataset.index];
+            const el = document.createElement('div');
+            el.className = 'nf-select-option';
+            el.classList.toggle('is-selected', index === selectedIndex);
+            el.classList.toggle('is-active', index === this.highlight);
+            el.classList.toggle('is-disabled', option.disabled || !!group?.disabled);
+            el.classList.toggle('is-placeholder', option.value === '');
+            el.setAttribute('role', 'option');
+            el.dataset.index = index;
+            el.setAttribute('aria-selected', String(index === selectedIndex));
+            if (option.disabled) el.setAttribute('aria-disabled', 'true');
+            // Text via textContent so option labels are never parsed as HTML.
+            el.innerHTML = `<span></span>${CHECK}`;
             el.firstElementChild.textContent = option.label || option.text;
-            el.addEventListener('click', () => this.choose(+el.dataset.index));
-            el.addEventListener('mousemove', () => this.setHighlight(+el.dataset.index, false));
+            el.addEventListener('click', () => this.choose(index));
+            el.addEventListener('mousemove', () => this.setHighlight(index, false));
+            fragment.append(el);
         });
 
-        this.menu.querySelector('.is-selected')?.scrollIntoView({ block: 'nearest' });
+        if (!fragment.childNodes.length) {
+            const empty = document.createElement('div');
+            empty.className = 'nf-select-empty';
+            empty.textContent = 'কিছু পাওয়া যায়নি';
+            fragment.append(empty);
+        }
+
+        this.list.replaceChildren(fragment);
+        if (!this.query) this.list.querySelector('.is-selected')?.scrollIntoView({ block: 'nearest' });
     }
 
     position() {
@@ -218,7 +277,7 @@ class NfSelect {
         let i = this.highlight;
         for (let n = 0; n < options.length; n++) {
             i = (i + step + options.length) % options.length;
-            if (!options[i].disabled && !options[i].hidden) return this.setHighlight(i);
+            if (!options[i].disabled && this.isShown(options[i])) return this.setHighlight(i);
         }
     }
 

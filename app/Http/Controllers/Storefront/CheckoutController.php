@@ -44,10 +44,8 @@ class CheckoutController extends Controller
                 'name' => $address->recipient_name ?? $user?->name,
                 'phone' => $address->phone ?? $user?->phone,
                 'email' => $user?->email,
-                'address' => $address->address_line1 ?? null,
-                'city' => in_array($address?->city, config('shop.cities'), true) ? $address->city : config('shop.inside_city'),
-                'area' => $address->address_line2 ?? null,
-                'postcode' => $address->postal_code ?? null,
+                'address' => $address ? collect([$address->address_line1, $address->address_line2])->filter()->implode(', ') : null,
+                'city' => in_array($address?->city, bd_districts(), true) ? $address->city : config('shop.inside_city'),
             ],
         ]);
     }
@@ -74,9 +72,7 @@ class CheckoutController extends Controller
             'shipping_phone' => $data['phone'],
             'shipping_address' => $data['address'],
             'shipping_city' => $data['city'],
-            'shipping_area' => $data['area'],
             'shipping_district' => $data['city'],
-            'shipping_postcode' => $data['postcode'] ?: null,
             'delivery_zone' => $zone,
             'payment_method' => $data['payment_method'],
             'coupon_code' => $summary['coupon'],

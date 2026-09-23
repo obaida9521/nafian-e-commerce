@@ -23,7 +23,7 @@
 @if($style === 'mini')
     {{-- Related / deal tile (Nafian Product · সাথে মানানসই, Nafian Offers · ছাড় চলছে) --}}
     <a href="{{ $url }}" class="block rounded-[20px] overflow-hidden bg-white nf-shadow group">
-        <x-ui.product-image :product="$product" hover class="aspect-[1/1.05]">
+        <x-ui.product-image :product="$product" hover class="aspect-square">
             @if($discount > 0)
                 <span class="absolute left-3.5 top-3.5 bg-espresso text-white rounded-full px-[13px] py-1.5 text-[12px] font-semibold">{{ bn_digits($discount) }}% ছাড়</span>
             @elseif(! $inStock)
@@ -43,7 +43,7 @@
 @elseif($style === 'rail')
     {{-- Phone home rail card (Nafian Mobile · হোম) --}}
     <a href="{{ $url }}" class="block w-[168px] flex-none">
-        <x-ui.product-image :product="$product" hover class="h-40 rounded-[18px]">
+        <x-ui.product-image :product="$product" hover class="h-[168px] rounded-[18px]">
             @if($discount > 0)
                 <span class="absolute left-2.5 top-2.5 bg-espresso text-white rounded-full px-[11px] py-[5px] text-[11px] font-semibold">{{ bn_digits($discount) }}%</span>
             @elseif(! $inStock)
@@ -63,7 +63,7 @@
     <div x-data="{ pick: false, notify: false }"
          class="group relative flex flex-col sm:rounded-[20px] sm:overflow-hidden sm:bg-white sm:nf-shadow">
         <a href="{{ $url }}" class="block">
-            <x-ui.product-image :product="$product" hover class="h-44 rounded-[18px] sm:h-auto sm:rounded-none sm:aspect-[1/1.1]">
+            <x-ui.product-image :product="$product" hover class="aspect-square rounded-[18px] sm:rounded-none">
                 @if(! $inStock)
                     <span class="absolute inset-0 grid place-items-center">
                         <span class="bg-[#241C1A]/70 text-white rounded-full px-[18px] py-[9px] text-[12.5px] sm:text-[13.5px] font-medium">স্টকে নেই</span>

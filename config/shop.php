@@ -18,8 +18,47 @@ return [
     |--------------------------------------------------------------------------
     */
     'inside_city' => 'ঢাকা',
-    'cities' => ['ঢাকা', 'চট্টগ্রাম', 'সিলেট', 'রাজশাহী', 'খুলনা', 'বরিশাল', 'রংপুর', 'ময়মনসিংহ', 'গাজীপুর', 'নারায়ণগঞ্জ', 'কুমিল্লা', 'অন্যান্য'],
-    'dhaka_areas' => ['বনানী', 'গুলশান', 'বারিধারা', 'ধানমন্ডি', 'মোহাম্মদপুর', 'মিরপুর', 'উত্তরা', 'বসুন্ধরা', 'বাড্ডা', 'তেজগাঁও', 'মতিঝিল', 'রামপুরা', 'খিলগাঁও', 'যাত্রাবাড়ী', 'লালবাগ', 'পুরান ঢাকা'],
+
+    /*
+    | All 64 districts, grouped by division: Bangla name => English name (the English
+    | name is extra search text in the checkout picker). Read the flat list via bd_districts().
+    */
+    'districts' => [
+        'ঢাকা বিভাগ' => [
+            'ঢাকা' => 'Dhaka', 'গাজীপুর' => 'Gazipur', 'নারায়ণগঞ্জ' => 'Narayanganj', 'নরসিংদী' => 'Narsingdi',
+            'মানিকগঞ্জ' => 'Manikganj', 'মুন্সিগঞ্জ' => 'Munshiganj', 'টাঙ্গাইল' => 'Tangail', 'কিশোরগঞ্জ' => 'Kishoreganj',
+            'ফরিদপুর' => 'Faridpur', 'গোপালগঞ্জ' => 'Gopalganj', 'মাদারীপুর' => 'Madaripur', 'শরীয়তপুর' => 'Shariatpur',
+            'রাজবাড়ী' => 'Rajbari',
+        ],
+        'চট্টগ্রাম বিভাগ' => [
+            'চট্টগ্রাম' => 'Chattogram Chittagong', 'কক্সবাজার' => "Cox's Bazar Coxs Bazar", 'কুমিল্লা' => 'Cumilla Comilla',
+            'ফেনী' => 'Feni', 'নোয়াখালী' => 'Noakhali', 'লক্ষ্মীপুর' => 'Lakshmipur', 'চাঁদপুর' => 'Chandpur',
+            'ব্রাহ্মণবাড়িয়া' => 'Brahmanbaria', 'রাঙ্গামাটি' => 'Rangamati', 'খাগড়াছড়ি' => 'Khagrachhari', 'বান্দরবান' => 'Bandarban',
+        ],
+        'রাজশাহী বিভাগ' => [
+            'রাজশাহী' => 'Rajshahi', 'নাটোর' => 'Natore', 'নওগাঁ' => 'Naogaon', 'চাঁপাইনবাবগঞ্জ' => 'Chapainawabganj Chapai Nawabganj',
+            'পাবনা' => 'Pabna', 'সিরাজগঞ্জ' => 'Sirajganj', 'বগুড়া' => 'Bogura Bogra', 'জয়পুরহাট' => 'Joypurhat',
+        ],
+        'খুলনা বিভাগ' => [
+            'খুলনা' => 'Khulna', 'যশোর' => 'Jashore Jessore', 'সাতক্ষীরা' => 'Satkhira', 'বাগেরহাট' => 'Bagerhat',
+            'নড়াইল' => 'Narail', 'মাগুরা' => 'Magura', 'ঝিনাইদহ' => 'Jhenaidah', 'কুষ্টিয়া' => 'Kushtia',
+            'চুয়াডাঙ্গা' => 'Chuadanga', 'মেহেরপুর' => 'Meherpur',
+        ],
+        'বরিশাল বিভাগ' => [
+            'বরিশাল' => 'Barishal Barisal', 'পটুয়াখালী' => 'Patuakhali', 'ভোলা' => 'Bhola', 'পিরোজপুর' => 'Pirojpur',
+            'বরগুনা' => 'Barguna', 'ঝালকাঠি' => 'Jhalokathi Jhalakathi',
+        ],
+        'সিলেট বিভাগ' => [
+            'সিলেট' => 'Sylhet', 'মৌলভীবাজার' => 'Moulvibazar', 'হবিগঞ্জ' => 'Habiganj', 'সুনামগঞ্জ' => 'Sunamganj',
+        ],
+        'রংপুর বিভাগ' => [
+            'রংপুর' => 'Rangpur', 'দিনাজপুর' => 'Dinajpur', 'ঠাকুরগাঁও' => 'Thakurgaon', 'পঞ্চগড়' => 'Panchagarh',
+            'নীলফামারী' => 'Nilphamari', 'লালমনিরহাট' => 'Lalmonirhat', 'কুড়িগ্রাম' => 'Kurigram', 'গাইবান্ধা' => 'Gaibandha',
+        ],
+        'ময়মনসিংহ বিভাগ' => [
+            'ময়মনসিংহ' => 'Mymensingh', 'জামালপুর' => 'Jamalpur', 'শেরপুর' => 'Sherpur', 'নেত্রকোনা' => 'Netrokona',
+        ],
+    ],
 
     /*
     |--------------------------------------------------------------------------

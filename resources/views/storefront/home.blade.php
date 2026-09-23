@@ -37,7 +37,7 @@
         </div>
     </div>
 
-    <div class="mt-4 px-5 nf-rail gap-[9px]">
+    <div class="mt-4 px-5 scroll-px-5 nf-rail gap-[9px]">
         <a href="{{ route('store.shop') }}" class="flex-none bg-espresso text-white rounded-full px-[17px] py-[9px] text-[13.5px] font-medium">সব</a>
         @foreach(nav_categories() as $navCategory)
             <a href="{{ route('store.shop.category', $navCategory->slug) }}" class="flex-none bg-sand-3 rounded-full px-[17px] py-[9px] text-[13.5px] font-medium whitespace-nowrap">{{ $navCategory->name }}</a>
@@ -48,7 +48,7 @@
         <h2 class="text-[19px] font-semibold">বেস্ট সেলার</h2>
         <a href="{{ route('store.shop', ['sort' => 'best_selling']) }}" class="text-[13.5px] font-medium text-accent">সব দেখুন</a>
     </div>
-    <div class="mt-3 px-5 nf-rail gap-3 pb-1">
+    <div class="mt-3 px-5 scroll-px-5 nf-rail gap-3 pb-1">
         @foreach($bestSellers as $product)
             @include('storefront.partials.product-card', ['product' => $product, 'style' => 'rail'])
         @endforeach
@@ -64,6 +64,45 @@
                     @if($daysLeft !== null)<span class="text-[13px] text-[#C3B9B4]">{{ bn_digits($daysLeft) }} দিন বাকি</span>@endif
                 </div>
             </a>
+        </div>
+    @endif
+
+    @if($collections->isNotEmpty())
+        <div class="mt-7 px-5">
+            <h2 class="text-[19px] font-semibold">কালেকশন</h2>
+        </div>
+        <div class="mt-3 px-5 scroll-px-5 nf-rail gap-3 pb-1">
+            @foreach($collections as $collection)
+                @php
+                    $meta = collect([
+                        $collection->products_count ? bn_digits($collection->products_count).'টি পণ্য' : null,
+                        $collection->min_price ? bn_price($collection->min_price).' থেকে' : null,
+                    ])->filter()->implode(' · ');
+                    $dark = $loop->first || $collection->image_url;
+                @endphp
+                <a href="{{ route('store.shop.category', $collection->slug) }}"
+                   @class(['relative flex-none w-[72%] overflow-hidden rounded-[20px] h-[180px] p-[18px] flex flex-col justify-end', 'text-[#F3EDE9]' => $dark])
+                   style="background:{{ $loop->first ? 'linear-gradient(150deg,#3B2F2D,#5A4842)' : ($loop->index === 1 ? 'linear-gradient(150deg,#F4F1EE,#E9E4DF)' : 'linear-gradient(150deg,#EFF2F5,#E3E9EE)') }};">
+                    @if($collection->image_url)
+                        <img src="{{ $collection->image_url }}" alt="" loading="lazy" class="absolute inset-0 w-full h-full object-cover">
+                        <div class="absolute inset-0" style="background:linear-gradient(180deg,rgba(26,20,19,0) 30%,rgba(26,20,19,.78) 100%);"></div>
+                    @endif
+                    <div class="relative font-display text-[22px] leading-tight">{{ $collection->name }}</div>
+                    @if($meta)
+                        <div @class(['relative mt-1 text-[12.5px]', 'text-[#E2D9D4]' => $dark, 'text-muted' => ! $dark])>{{ $meta }}</div>
+                    @endif
+                </a>
+            @endforeach
+        </div>
+    @endif
+
+    @if($discover['products']->isNotEmpty())
+        <div class="mt-7 px-5 flex items-baseline justify-between">
+            <h2 class="text-[19px] font-semibold">দেখতে থাকুন</h2>
+            <a href="{{ route('store.shop') }}" class="text-[13.5px] font-medium text-accent">সব দেখুন</a>
+        </div>
+        <div class="mt-3 px-5">
+            @include('storefront.partials.discover-grid', ['seed' => $discoverSeed, 'gridClass' => 'grid grid-cols-2 gap-3.5'])
         </div>
     @endif
 
@@ -151,30 +190,46 @@
         </div>
     @endif
 
-    <div class="mx-8 mt-[72px] bg-panel-2 rounded-[28px] p-14 grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-12 items-center">
-        <div class="rounded-[20px] min-h-[380px]" style="background:linear-gradient(150deg,#EDE8E3,#E2DBD5);"></div>
-        <div>
-            <div class="text-[13px] font-medium tracking-[0.22em] text-accent">আমাদের গল্প</div>
-            <h2 class="mt-3.5 font-display text-[38px] leading-[1.3]">ঢাকায় ছোট ব্যাচে তৈরি সুগন্ধি</h2>
-            <p class="mt-4 text-[16.5px] leading-[1.9] text-cocoa">সিলেট থেকে ঊদ, তায়েফ থেকে গোলাপ অ্যাবসলিউট, সার্টিফায়েড মহীশূর চন্দন। বোতলজাত করার আগে প্রতিটি ব্যাচ ছয় সপ্তাহ রাখা হয়।</p>
-            <p class="mt-3 text-[16.5px] leading-[1.9] text-cocoa">দাম মেলাতে আমরা ফর্মুলা বদলাই না। উপাদান না পেলে সেই সুগন্ধি বানানো বন্ধ রাখি।</p>
-            <a href="{{ route('store.page', 'about') }}" class="inline-block mt-[26px] bg-espresso text-white rounded-full px-8 py-[15px] text-[14.5px] font-semibold hover:bg-ink">গল্পটি পড়ুন</a>
+    @if($discover['products']->isNotEmpty())
+        <div class="px-8 pt-[72px]">
+            <div class="flex items-end justify-between gap-5 flex-wrap">
+                <div>
+                    <h2 class="font-display text-[38px]">দেখতে থাকুন</h2>
+                    <div class="mt-1.5 text-[15px] text-muted">আপনার জন্য বাছাই করা আরও কিছু সুগন্ধি</div>
+                </div>
+                <a href="{{ route('store.shop') }}" class="text-[15px] font-medium text-accent hover:underline">সব দেখুন →</a>
+            </div>
+            <div class="mt-7">
+                @include('storefront.partials.discover-grid', ['seed' => $discoverSeed, 'gridClass' => 'grid grid-cols-2 desk:grid-cols-4 gap-6'])
+            </div>
         </div>
-    </div>
+    @endif
 
     @if($reviews->isNotEmpty())
-        <div class="px-8 pt-[72px]">
-            <div class="flex items-baseline gap-4 flex-wrap">
-                <h2 class="font-display text-[38px]">ক্রেতাদের মতামত</h2>
-                <span class="text-[15px] text-muted">গড় {{ bn_digits(number_format($reviewStats['average'], 1)) }} · {{ bn_digits($reviewStats['count']) }} রিভিউ</span>
+        <div class="pt-[72px] pb-4" x-data="{
+                atStart: true,
+                atEnd: false,
+                update() { const r = this.$refs.rail; this.atStart = r.scrollLeft <= 4; this.atEnd = r.scrollLeft + r.clientWidth >= r.scrollWidth - 4; },
+                slide(direction) { this.$refs.rail.scrollBy({ left: direction * this.$refs.rail.clientWidth * 0.8, behavior: 'smooth' }); },
+             }" x-init="$nextTick(() => update())">
+            <div class="px-8 flex items-end justify-between gap-5 flex-wrap">
+                <div class="flex items-baseline gap-4 flex-wrap">
+                    <h2 class="font-display text-[38px]">ক্রেতাদের মতামত</h2>
+                    <span class="text-[15px] text-muted">গড় {{ bn_digits(number_format($reviewStats['average'], 1)) }} · {{ bn_digits($reviewStats['count']) }} রিভিউ</span>
+                </div>
+                <div class="flex gap-2">
+                    <button type="button" @click="slide(-1)" :disabled="atStart" class="w-11 h-11 rounded-full border border-line grid place-items-center text-espresso transition hover:bg-sand disabled:opacity-35 disabled:hover:bg-transparent" aria-label="আগের রিভিউ">←</button>
+                    <button type="button" @click="slide(1)" :disabled="atEnd" class="w-11 h-11 rounded-full border border-line grid place-items-center text-espresso transition hover:bg-sand disabled:opacity-35 disabled:hover:bg-transparent" aria-label="পরের রিভিউ">→</button>
+                </div>
             </div>
-            <div class="mt-[26px] grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-5">
+            <div x-ref="rail" @scroll.debounce.50ms="update()" @resize.window.debounce.100ms="update()"
+                 class="mt-[26px] nf-rail gap-5 px-8 scroll-px-8 pb-2">
                 @foreach($reviews as $review)
-                    <div class="bg-panel-2 rounded-[20px] p-7">
-                        <div class="text-[14px] text-espresso">{{ str_repeat('★', $review->rating) }}{{ str_repeat('☆', 5 - $review->rating) }}</div>
-                        <p class="mt-3 text-[16.5px] leading-[1.85] text-ink line-clamp-4">{{ $review->body }}</p>
-                        <div class="mt-4 text-[14.5px] font-semibold">
-                            {{ $review->user->name }} <span class="font-normal text-muted">· {{ $review->product->name }}</span>
+                    <div class="flex-none w-[340px] bg-panel-2 rounded-[20px] p-7 flex flex-col">
+                        <div class="text-[14px] text-espresso">{{ str_repeat('★', $review->rating) }}<span class="text-line">{{ str_repeat('★', 5 - $review->rating) }}</span></div>
+                        <p class="mt-3 text-[16px] leading-[1.85] text-ink line-clamp-5 flex-1">{{ $review->body }}</p>
+                        <div class="mt-4 text-[14.5px] font-semibold truncate">
+                            {{ $review->user?->name ?? 'ক্রেতা' }} <span class="font-normal text-muted">· {{ $review->product?->name }}</span>
                         </div>
                         <div class="mt-0.5 text-[13px] text-accent">ভেরিফাইড ক্রেতা</div>
                     </div>
@@ -182,18 +237,5 @@
             </div>
         </div>
     @endif
-
-    <div class="mx-8 mt-[72px] rounded-[28px] p-14 text-[#F1ECE9] grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-9 items-center" style="background:linear-gradient(140deg,#3B2F2D,#33444F);">
-        <div>
-            <h2 class="font-display text-[30px]">মাসে দুটি চিঠি</h2>
-            <p class="mt-2.5 text-[16px] text-[#C3B9B4]">নতুন রিলিজ, রিস্টক আর সোর্সিং নিয়ে ছোট নোট। অপ্রয়োজনীয় ডিসকাউন্ট মেইল নয়।</p>
-        </div>
-        @include('storefront.partials.subscribe-form', [
-            'source' => 'newsletter',
-            'placeholder' => 'আপনার ইমেইল',
-            'button' => 'সাবস্ক্রাইব',
-            'type' => 'email',
-        ])
-    </div>
 </div>
 @endsection

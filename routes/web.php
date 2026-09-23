@@ -37,6 +37,7 @@ use Illuminate\Support\Facades\Route;
 */
 Route::name('store.')->group(function () {
     Route::get('/', [HomeController::class, 'index'])->name('home');
+    Route::get('/discover', [HomeController::class, 'discover'])->middleware('throttle:60,1')->name('discover');
 
     Route::get('/offers', [OffersController::class, 'index'])->name('offers');
     Route::get('/page/{slug}', [PageController::class, 'show'])->name('page');

@@ -50,10 +50,8 @@ class StorefrontCheckoutTest extends TestCase
             'name' => 'নুসরাত জাহান',
             'phone' => '০১৭১২ ৩৪৫ ৬৭৮',
             'email' => 'nusrat@example.com',
-            'address' => 'বাড়ি ৪২, রোড ১১',
+            'address' => 'বাড়ি ৪২, রোড ১১, বনানী',
             'city' => 'ঢাকা',
-            'area' => 'বনানী',
-            'postcode' => '১২১৩',
             'payment_method' => 'cod',
         ], $overrides);
     }
@@ -68,14 +66,16 @@ class StorefrontCheckoutTest extends TestCase
         $this->assertSame('inside', $order->delivery_zone);
         $this->assertSame(79.0, (float) $order->delivery_charge);
         $this->assertSame('01712345678', $order->shipping_phone);
-        $this->assertSame('বনানী', $order->shipping_area);
-        $this->assertSame('1213', $order->shipping_postcode);
+        $this->assertSame('বাড়ি ৪২, রোড ১১, বনানী', $order->shipping_address);
+        $this->assertSame('ঢাকা', $order->shipping_district);
+        $this->assertNull($order->shipping_area);
+        $this->assertNull($order->shipping_postcode);
     }
 
     public function test_outside_dhaka_order_uses_the_outside_delivery_charge(): void
     {
         $this->post('/cart', ['variant_id' => $this->variant()->id]);
-        $this->post('/checkout', $this->checkoutPayload(['city' => 'চট্টগ্রাম', 'area' => 'আগ্রাবাদ']))->assertRedirect();
+        $this->post('/checkout', $this->checkoutPayload(['city' => 'কক্সবাজার']))->assertRedirect();
 
         $order = Order::latest('id')->firstOrFail();
 
@@ -90,6 +90,31 @@ class StorefrontCheckoutTest extends TestCase
         $this->post('/checkout', $this->checkoutPayload())->assertRedirect();
 
         $this->assertSame(0.0, (float) Order::latest('id')->firstOrFail()->delivery_charge);
+    }
+
+    public function test_the_district_must_be_one_of_the_64_districts(): void
+    {
+        $this->assertCount(64, bd_districts());
+
+        $this->post('/cart', ['variant_id' => $this->variant()->id]);
+
+        $this->post('/checkout', $this->checkoutPayload(['city' => 'অন্যান্য']))
+            ->assertSessionHasErrors('city');
+
+        $this->assertSame(0, Order::count());
+    }
+
+    public function test_checkout_page_lists_the_districts_without_area_or_postcode_fields(): void
+    {
+        $this->post('/cart', ['variant_id' => $this->variant()->id]);
+
+        $this->get('/checkout')
+            ->assertOk()
+            ->assertSee('জেলা')
+            ->assertSee('নেত্রকোনা')
+            ->assertSee('data-search="Cox&#039;s Bazar Coxs Bazar"', false)
+            ->assertDontSee('name="area"', false)
+            ->assertDontSee('name="postcode"', false);
     }
 
     public function test_a_disabled_payment_method_is_rejected(): void

@@ -43,6 +43,18 @@ if (! function_exists('color_hex')) {
     }
 }
 
+if (! function_exists('bd_districts')) {
+    /**
+     * Every district name (Bangla) from `config('shop.districts')`, flattened across divisions.
+     *
+     * @return list<string>
+     */
+    function bd_districts(): array
+    {
+        return array_merge(...array_values(array_map('array_keys', config('shop.districts', []))));
+    }
+}
+
 if (! function_exists('order_status_style')) {
     /**
      * Pill colours for an order status, mirroring the prototype palette.

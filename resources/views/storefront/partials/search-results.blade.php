@@ -16,7 +16,7 @@
         <div class="mt-3.5 flex flex-col gap-3.5">
             <template x-for="p in products" :key="p.url">
                 <a :href="p.url" @click="remember(q)" class="flex gap-[13px] items-center">
-                    <span class="w-14 h-[66px] rounded-xl flex-none overflow-hidden"
+                    <span class="w-14 h-14 rounded-xl flex-none overflow-hidden"
                           :style="`background:linear-gradient(160deg, color-mix(in srgb, ${p.tone} 12%, #F6F3F1), color-mix(in srgb, ${p.tone} 30%, #ECE7E3))`">
                         <template x-if="p.image"><img :src="p.image" alt="" class="w-full h-full object-cover" onerror="this.remove()"></template>
                     </span>

@@ -12,7 +12,7 @@
     {{-- Phone layout (Nafian Mobile · ব্যাগ) --}}
     <div class="bg-panel rounded-[18px] p-3.5 flex gap-[13px]">
         <a href="{{ route('store.product', $product->slug) }}" class="flex-none">
-            <x-ui.product-image :product="$product" :variant="$variant" class="w-[76px] h-[88px] rounded-[13px]" />
+            <x-ui.product-image :product="$product" :variant="$variant" class="w-[76px] h-[76px] rounded-[13px]" />
         </a>
         <div class="flex-1 min-w-0">
             <div class="flex justify-between gap-2">
@@ -34,7 +34,7 @@
     {{-- Desktop layout (Nafian Checkout · আপনার ব্যাগ) --}}
     <div class="bg-panel rounded-[20px] p-[18px] flex gap-[18px] items-center flex-wrap">
         <a href="{{ route('store.product', $product->slug) }}" class="flex-none">
-            <x-ui.product-image :product="$product" :variant="$variant" class="w-24 h-[106px] rounded-[14px]" />
+            <x-ui.product-image :product="$product" :variant="$variant" class="w-24 h-24 rounded-[14px]" />
         </a>
         <div class="flex-1 min-w-[180px]">
             <a href="{{ route('store.product', $product->slug) }}" class="text-[18px] font-semibold hover:text-accent">{{ $product->name }}</a>

@@ -90,7 +90,7 @@
 
     {{-- ── Phone gallery ── --}}
     <div class="sm:hidden relative">
-        <div class="relative h-80 overflow-hidden">
+        <div class="relative aspect-square overflow-hidden">
             @include('storefront.partials.pdp-stage', ['slides' => $slides, 'alt' => $product->name, 'where' => 'phone'])
             <div class="absolute inset-0 -z-10" style="background:linear-gradient(160deg, color-mix(in srgb, {{ $product->tone ?? '#C2BBB0' }} 12%, #F6F3F1), color-mix(in srgb, {{ $product->tone ?? '#C2BBB0' }} 34%, #E6E0DA));"></div>
 
@@ -125,43 +125,48 @@
     </div>
 
     <div class="sm:hidden px-5 pt-[18px] pb-6">
-        <div class="text-[12.5px] text-muted">{{ $category?->name }}</div>
-        <h1 class="mt-1 font-display text-[28px] leading-tight">{{ $product->name }}</h1>
-        <div class="mt-2 flex items-center gap-2 text-[13.5px] text-cocoa flex-wrap">
-            @if($product->rating)
-                <span class="text-espresso">{{ str_repeat('★', (int) round($product->rating)) }}</span>
-                {{ bn_digits(number_format((float) $product->rating, 1)) }} <span class="text-muted">· {{ bn_digits($totalReviews) }}</span>
-            @endif
-            <span class="rounded-full px-[11px] py-1 text-[12px] font-semibold" :class="available > 0 ? 'bg-accent-soft text-accent' : 'bg-rose-soft text-rose'"
+        <div class="text-[12.5px] text-black">{{ $category?->name }}</div>
+        <div class="mt-1 flex items-start justify-between gap-3">
+            <h1 class="font-sans font-semibold text-[24px] leading-snug text-black">{{ $product->name }}</h1>
+            <span class="mt-1 flex-none rounded-full px-[11px] py-1 text-[12px] font-semibold whitespace-nowrap" :class="available > 0 ? 'bg-accent-soft text-accent' : 'bg-rose-soft text-rose'"
                   x-text="available > 0 ? 'স্টকে আছে' : 'স্টকে নেই'"></span>
         </div>
+        <div class="mt-2 flex items-center justify-between gap-3">
+            <div class="flex items-baseline gap-2 flex-wrap min-w-0">
+                <span class="text-[24px] font-semibold text-espresso" x-text="'৳' + bnNumber(variant?.price ?? 0)"></span>
+                <template x-if="variant && variant.compare > variant.price">
+                    <span class="text-[15px] text-muted line-through" x-text="'৳' + bnNumber(variant.compare)"></span>
+                </template>
+                <template x-if="variant && variant.compare > variant.price">
+                    <span class="bg-clay-soft text-espresso rounded-full px-2.5 py-1 text-[12px] font-semibold"
+                          x-text="'সাশ্রয় ৳' + bnNumber(variant.compare - variant.price)"></span>
+                </template>
+            </div>
+            @if($product->rating)
+                <a href="#reviews-mobile" class="flex-none inline-flex items-center gap-1.5 rounded-full bg-sand-3 px-2.5 py-1 text-[12px] font-semibold text-black whitespace-nowrap">
+                    <x-ui.stars :rating="$product->rating" class="text-[11px]" />
+                    {{ bn_digits(number_format((float) $product->rating, 1)) }}
+                    <span class="font-normal">({{ bn_digits($totalReviews) }})</span>
+                </a>
+            @endif
+        </div>
         @if($product->short_description)
-            <p class="mt-3.5 text-[15.5px] leading-[1.85] text-cocoa">{{ $product->short_description }}</p>
+            <p class="mt-3.5 text-[15.5px] leading-[1.85] text-black">{{ $product->short_description }}</p>
         @endif
 
         @foreach($optionGroups as $group)
             <div class="mt-5">
                 <div class="text-[12px] font-medium tracking-[0.14em] uppercase text-muted">{{ $group['label'] }}</div>
-                <div class="mt-3 flex gap-[9px] flex-wrap">
-                    @foreach($group['values'] as $value)
-                        <button type="button" @click="selected['{{ $group['slug'] }}'] = @js($value)"
-                                :disabled="! optionAvailable(@js($group['slug']), @js($value))"
-                                class="flex-1 min-w-[92px] rounded-[14px] py-3 px-3 text-center disabled:opacity-40"
-                                :class="selected['{{ $group['slug'] }}'] === @js($value) ? 'bg-espresso text-white' : 'bg-sand-3 text-cocoa'">
-                            <span class="block text-[13px]">{{ bn_digits($value) }}</span>
-                            <template x-if="priceFor(@js($group['slug']), @js($value)) !== null">
-                                <span class="block mt-0.5 text-[14px] font-semibold" x-text="'৳' + bnNumber(priceFor(@js($group['slug']), @js($value)))"></span>
-                            </template>
-                        </button>
-                    @endforeach
+                <div class="mt-2.5 flex gap-2 flex-wrap">
+                    @include('storefront.partials.variant-chips', ['group' => $group])
                 </div>
             </div>
         @endforeach
 
-        <div class="mt-[18px] bg-panel-2 rounded-2xl p-4 flex flex-col gap-2.5 text-[13.5px] text-cocoa">
-            <div class="flex justify-between"><span>ঢাকার ভেতরে</span><span class="text-ink">২৪ ঘণ্টা · {{ bn_price($general['delivery_inside']) }}</span></div>
-            <div class="flex justify-between"><span>ঢাকার বাইরে</span><span class="text-ink">২–৩ দিন · {{ bn_price($general['delivery_outside']) }}</span></div>
-            <div class="flex justify-between"><span>ক্যাশ অন ডেলিভারি</span><span class="text-accent">সারাদেশে</span></div>
+        <div class="mt-[18px] bg-panel-2 rounded-2xl p-4 flex flex-col gap-2.5 text-[13.5px] text-black">
+            <div class="flex justify-between"><span>ঢাকার ভেতরে</span><span class="text-black">২৪ ঘণ্টা · {{ bn_price($general['delivery_inside']) }}</span></div>
+            <div class="flex justify-between"><span>ঢাকার বাইরে</span><span class="text-black">২–৩ দিন · {{ bn_price($general['delivery_outside']) }}</span></div>
+            <div class="flex justify-between"><span>ক্যাশ অন ডেলিভারি</span><span class="text-black">সারাদেশে</span></div>
         </div>
 
         <div class="mt-[18px] flex flex-col">
@@ -169,7 +174,7 @@
                 <button type="button" @click="openPanel = openPanel === {{ $index }} ? null : {{ $index }}" class="py-3.5 flex justify-between text-[15px] font-medium text-left">
                     {{ $title }} <span class="text-muted" x-text="openPanel === {{ $index }} ? '−' : '+'">+</span>
                 </button>
-                <p x-show="openPanel === {{ $index }}" x-collapse x-cloak class="pb-3.5 text-[15px] leading-[1.85] text-cocoa">{{ $body }}</p>
+                <p x-show="openPanel === {{ $index }}" x-collapse x-cloak class="pb-3.5 text-[15px] leading-[1.85] text-black">{{ $body }}</p>
                 <div class="nf-line"></div>
             @endforeach
         </div>
@@ -212,7 +217,7 @@
                         <a href="{{ route('store.shop.category', $category->slug) }}" class="text-[14px] font-medium text-accent">সব দেখুন →</a>
                     @endif
                 </div>
-                <div class="mt-3.5 -mx-5 px-5 nf-rail gap-3 pb-1">
+                <div class="mt-3.5 -mx-5 px-5 scroll-px-5 nf-rail gap-3 pb-1">
                     @foreach($related as $relatedProduct)
                         @include('storefront.partials.product-card', ['product' => $relatedProduct, 'style' => 'rail'])
                     @endforeach
@@ -235,7 +240,7 @@
                 <div class="flex flex-col gap-3 p-1 -m-1 max-[1100px]:flex-row max-[1100px]:order-2 max-[1100px]:overflow-x-auto">
                     @forelse($slides as $index => $slide)
                         <button type="button" @click="show({{ $index }}, {{ $slide['type'] === 'video' ? "'desk'" : 'false' }})"
-                                class="relative flex-none aspect-[1/1.1] max-[1100px]:w-[84px] rounded-[14px] overflow-hidden bg-sand ring-offset-2 ring-offset-white transition"
+                                class="relative flex-none aspect-square max-[1100px]:w-[84px] rounded-[14px] overflow-hidden bg-sand ring-offset-2 ring-offset-white transition"
                                 :class="image === {{ $index }} ? 'ring-2 ring-dust opacity-100' : 'opacity-55 hover:opacity-100'"
                                 :aria-current="image === {{ $index }}"
                                 aria-label="{{ $slide['type'] === 'video' ? 'ভিডিও চালান' : 'ছবি '.($index + 1) }}">
@@ -246,11 +251,11 @@
                         </button>
                     @empty
                         @for($i = 0; $i < 3; $i++)
-                            <div class="aspect-[1/1.1] max-[1100px]:w-[84px] rounded-[14px]" style="background:linear-gradient(160deg,#F3F0ED,#E9E4DF);"></div>
+                            <div class="aspect-square max-[1100px]:w-[84px] rounded-[14px]" style="background:linear-gradient(160deg,#F3F0ED,#E9E4DF);"></div>
                         @endfor
                     @endforelse
                 </div>
-                <div class="relative rounded-[24px] overflow-hidden aspect-[1/1.08] shadow-[0_18px_44px_-30px_rgba(36,28,26,.6)]"
+                <div class="relative rounded-[24px] overflow-hidden aspect-square shadow-[0_18px_44px_-30px_rgba(36,28,26,.6)]"
                      style="background:linear-gradient(160deg, color-mix(in srgb, {{ $product->tone ?? '#C2BBB0' }} 12%, #F4F1EE), color-mix(in srgb, {{ $product->tone ?? '#C2BBB0' }} 32%, #E7E1DC));">
                     @include('storefront.partials.pdp-stage', ['slides' => $slides, 'alt' => $product->name, 'where' => 'desk'])
                     <template x-if="variant && variant.compare > variant.price && ! playing">
@@ -262,14 +267,14 @@
 
             {{-- Details --}}
             <div>
-                <div class="text-[14px] text-muted">NAFIAN{{ $category ? ' · '.$category->name : '' }}</div>
-                <h1 class="mt-2 font-display text-[44px] desk:text-[64px] leading-[1.15]">{{ $product->name }}</h1>
+                <div class="text-[14px] text-black">NAFIAN{{ $category ? ' · '.$category->name : '' }}</div>
+                <h1 class="mt-2 font-sans font-semibold text-[36px] desk:text-[46px] leading-[1.25] text-black">{{ $product->name }}</h1>
 
-                <div class="mt-2.5 flex items-center gap-2.5 text-[14.5px] text-cocoa flex-wrap">
+                <div class="mt-2.5 flex items-center gap-2.5 text-[14.5px] text-black flex-wrap">
                     @if($product->rating)
-                        <span class="text-espresso">{{ str_repeat('★', (int) round($product->rating)) }}</span>
+                        <x-ui.stars :rating="$product->rating" />
                         {{ bn_digits(number_format((float) $product->rating, 1)) }}
-                        <span class="text-muted">· {{ bn_digits($totalReviews) }} রিভিউ</span>
+                        <span class="text-black">· {{ bn_digits($totalReviews) }} রিভিউ</span>
                     @endif
                     <span class="rounded-full px-3 py-[5px] text-[13px] font-medium" :class="available > 0 ? 'bg-accent-soft text-accent' : 'bg-rose-soft text-rose'"
                           x-text="available > 0 ? 'স্টকে আছে' : 'স্টকে নেই'"></span>
@@ -287,24 +292,14 @@
                 </div>
 
                 @if($product->short_description)
-                    <p class="mt-[18px] text-[16.5px] leading-[1.9] text-cocoa">{{ $product->short_description }}</p>
+                    <p class="mt-[18px] text-[16.5px] leading-[1.9] text-black">{{ $product->short_description }}</p>
                 @endif
 
                 @foreach($optionGroups as $group)
                     <div class="mt-6">
                         <div class="text-[14.5px] font-semibold">{{ $group['label'] }} নির্বাচন করুন</div>
-                        <div class="mt-3 flex gap-2.5 flex-wrap">
-                            @foreach($group['values'] as $value)
-                                <button type="button" @click="selected['{{ $group['slug'] }}'] = @js($value)"
-                                        :disabled="! optionAvailable(@js($group['slug']), @js($value))"
-                                        class="rounded-[16px] px-[22px] py-3.5 text-left disabled:opacity-40 disabled:line-through"
-                                        :class="selected['{{ $group['slug'] }}'] === @js($value) ? 'bg-espresso text-white' : 'bg-sand text-cocoa'">
-                                    <span class="block text-[14.5px]">{{ bn_digits($value) }}</span>
-                                    <template x-if="priceFor(@js($group['slug']), @js($value)) !== null">
-                                        <span class="block text-[14px] font-semibold" x-text="'৳' + bnNumber(priceFor(@js($group['slug']), @js($value)))"></span>
-                                    </template>
-                                </button>
-                            @endforeach
+                        <div class="mt-3 flex gap-2 flex-wrap">
+                            @include('storefront.partials.variant-chips', ['group' => $group])
                         </div>
                     </div>
                 @endforeach
@@ -351,11 +346,11 @@
                     </template>
                 </div>
 
-                <div class="mt-[26px] bg-panel rounded-[20px] px-6 py-[22px] flex flex-col gap-3 text-[14.5px] text-cocoa">
-                    <div class="flex justify-between"><span>ঢাকার ভেতরে</span><span class="text-ink">২৪ ঘণ্টা · {{ bn_price($general['delivery_inside']) }}</span></div>
-                    <div class="flex justify-between"><span>ঢাকার বাইরে</span><span class="text-ink">২–৩ দিন · {{ bn_price($general['delivery_outside']) }}</span></div>
-                    <div class="flex justify-between"><span>ক্যাশ অন ডেলিভারি</span><span class="text-accent">সারাদেশে</span></div>
-                    <div class="flex justify-between"><span>রিটার্ন</span><span class="text-ink">৭ দিন, সিল অক্ষত থাকলে</span></div>
+                <div class="mt-[26px] bg-panel rounded-[20px] px-6 py-[22px] flex flex-col gap-3 text-[14.5px] text-black">
+                    <div class="flex justify-between"><span>ঢাকার ভেতরে</span><span class="text-black">২৪ ঘণ্টা · {{ bn_price($general['delivery_inside']) }}</span></div>
+                    <div class="flex justify-between"><span>ঢাকার বাইরে</span><span class="text-black">২–৩ দিন · {{ bn_price($general['delivery_outside']) }}</span></div>
+                    <div class="flex justify-between"><span>ক্যাশ অন ডেলিভারি</span><span class="text-black">সারাদেশে</span></div>
+                    <div class="flex justify-between"><span>রিটার্ন</span><span class="text-black">৭ দিন, সিল অক্ষত থাকলে</span></div>
                 </div>
 
                 <div class="mt-6 flex flex-col">
@@ -364,7 +359,7 @@
                         <button type="button" @click="openPanel = openPanel === {{ $index }} ? null : {{ $index }}" class="py-4 flex justify-between text-[15px] font-medium text-left">
                             {{ $title }} <span class="text-muted" x-text="openPanel === {{ $index }} ? '−' : '+'">+</span>
                         </button>
-                        <p x-show="openPanel === {{ $index }}" x-collapse x-cloak class="pb-4 text-[15.5px] leading-[1.9] text-cocoa">{{ $body }}</p>
+                        <p x-show="openPanel === {{ $index }}" x-collapse x-cloak class="pb-4 text-[15.5px] leading-[1.9] text-black">{{ $body }}</p>
                     @endforeach
                 </div>
             </div>

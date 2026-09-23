@@ -81,7 +81,7 @@
                     @endphp
                     <div class="rounded-[22px] overflow-hidden bg-white nf-shadow flex flex-col">
                         <a href="{{ route('store.product', $combo->slug) }}">
-                            <x-ui.product-image :product="$combo" hover class="aspect-[1/0.78]">
+                            <x-ui.product-image :product="$combo" hover class="aspect-square">
                                 @if($saving > 0)
                                     <span class="absolute left-3.5 top-3.5 bg-espresso text-white rounded-full px-3.5 py-1.5 text-[12.5px] font-semibold">সাশ্রয় {{ bn_price($saving) }}</span>
                                 @elseif($combo->badge)
@@ -147,10 +147,10 @@
             <div class="grid grid-cols-3 gap-3">
                 @foreach($setPicks as $pick)
                     <a href="{{ route('store.product', $pick->slug) }}">
-                        <x-ui.product-image :product="$pick" class="aspect-[1/1.2] rounded-2xl" />
+                        <x-ui.product-image :product="$pick" class="aspect-square rounded-2xl" />
                     </a>
                 @endforeach
-                <a href="{{ route('store.shop') }}" class="aspect-[1/1.2] rounded-2xl bg-sand-2 grid place-items-center text-[22px] font-medium text-dust">+</a>
+                <a href="{{ route('store.shop') }}" class="aspect-square rounded-2xl bg-sand-2 grid place-items-center text-[22px] font-medium text-dust">+</a>
             </div>
         </div>
     </div>

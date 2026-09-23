@@ -14,13 +14,12 @@ class CheckoutRequest extends FormRequest
     }
 
     /**
-     * Normalise Bangla digits and spacing in the phone and postcode before validating.
+     * Normalise Bangla digits and spacing in the phone number before validating.
      */
     protected function prepareForValidation(): void
     {
         $this->merge([
             'phone' => normalize_phone((string) $this->input('phone')),
-            'postcode' => latin_digits(trim((string) $this->input('postcode'))),
         ]);
     }
 
@@ -34,9 +33,7 @@ class CheckoutRequest extends FormRequest
             'phone' => ['required', 'regex:/^01[3-9][0-9]{8}$/'],
             'email' => ['nullable', 'email', 'max:150'],
             'address' => ['required', 'string', 'max:255'],
-            'city' => ['required', 'string', Rule::in(config('shop.cities'))],
-            'area' => ['required', 'string', 'max:100'],
-            'postcode' => ['nullable', 'string', 'max:10'],
+            'city' => ['required', 'string', Rule::in(bd_districts())],
             'notes' => ['nullable', 'string', 'max:500'],
             'payment_method' => ['required', Rule::in($this->enabledPaymentMethods())],
         ];
@@ -62,15 +59,13 @@ class CheckoutRequest extends FormRequest
             'phone' => 'মোবাইল নম্বর',
             'email' => 'ইমেইল',
             'address' => 'সম্পূর্ণ ঠিকানা',
-            'city' => 'শহর',
-            'area' => 'এলাকা',
-            'postcode' => 'পোস্ট কোড',
+            'city' => 'জেলা',
             'payment_method' => 'পেমেন্ট পদ্ধতি',
         ];
     }
 
     /**
-     * The inside-Dhaka rate applies to the inside city; everywhere else pays the outside rate.
+     * The inside-Dhaka rate applies to the inside district; every other district pays the outside rate.
      */
     public function deliveryZone(): string
     {
