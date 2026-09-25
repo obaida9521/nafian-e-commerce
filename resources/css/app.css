@@ -90,6 +90,134 @@
         box-shadow: 0 8px 28px -22px rgba(36, 28, 26, 0.5);
     }
 
+    /* Voucher-ticket badge (discount %): an all-white ticket with a scalloped left
+       edge, top/bottom notches and a perforated line after the stub. The shape is masked on
+       ::before so the drop shadow can follow the cut-outs. */
+    .nf-ticket {
+        --nf-ticket-stub: 15px;
+        position: relative;
+        isolation: isolate;
+        display: inline-block;
+        padding-left: calc(var(--nf-ticket-stub) + 10px);
+        padding-right: 12px;
+        line-height: 1.35;
+        color: var(--color-red-600);
+        filter: drop-shadow(0 4px 10px rgba(36, 28, 26, 0.18)) drop-shadow(0 1px 1.5px rgba(36, 28, 26, 0.12));
+    }
+
+    .nf-ticket::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        border-radius: 3px 4px 4px 3px;
+        background: #fff;
+        --nf-ticket-mask:
+            radial-gradient(circle at 0 50%, #0000 1.7px, #000 2.1px) 0 50% / 100% 6px repeat-y,
+            radial-gradient(circle at var(--nf-ticket-stub) 0, #0000 3.4px, #000 3.8px),
+            radial-gradient(circle at var(--nf-ticket-stub) 100%, #0000 3.4px, #000 3.8px);
+        -webkit-mask: var(--nf-ticket-mask);
+        -webkit-mask-composite: source-in, source-in;
+        mask: var(--nf-ticket-mask);
+        mask-composite: intersect;
+    }
+
+    .nf-ticket::after {
+        content: '';
+        position: absolute;
+        left: calc(var(--nf-ticket-stub) - 0.5px);
+        top: 6px;
+        bottom: 6px;
+        border-left: 1px dashed rgba(36, 28, 26, 0.18);
+    }
+
+    /* Out-of-stock overlay on product images: a soft wash with a full-width frosted
+       band across the middle; the text sits between two short hairlines. */
+    .nf-soldout {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.3);
+    }
+
+    .nf-soldout > span {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        width: 100%;
+        padding: 9px 12px;
+        background: rgba(36, 28, 26, 0.72);
+        -webkit-backdrop-filter: blur(6px);
+        backdrop-filter: blur(6px);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 -1px 0 rgba(255, 255, 255, 0.14);
+        color: #fff;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+    }
+
+    .nf-soldout > span::before,
+    .nf-soldout > span::after {
+        content: '';
+        width: 18px;
+        height: 1px;
+        background: rgba(255, 255, 255, 0.5);
+    }
+
+    /* Soft button whose dark fill glides in from the left on hover and out to the
+       right on leave. The fill is a transformed ::before layer so it animates smoothly. */
+    .nf-btn-fill {
+        position: relative;
+        isolation: isolate;
+        overflow: hidden;
+        background-color: var(--color-sand-2);
+        color: var(--color-espresso);
+        transition: color 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s ease;
+    }
+
+    .nf-btn-fill::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        background: var(--color-espresso);
+        transform: scaleX(0);
+        transform-origin: right center;
+        transition: transform 0.7s cubic-bezier(0.65, 0, 0.35, 1);
+    }
+
+    .nf-btn-fill:focus-visible {
+        color: #fff;
+    }
+
+    .nf-btn-fill:focus-visible::before {
+        transform: scaleX(1);
+        transform-origin: left center;
+    }
+
+    @media (hover: hover) {
+        .nf-btn-fill:hover {
+            color: #fff;
+        }
+
+        .nf-btn-fill:hover::before {
+            transform: scaleX(1);
+            transform-origin: left center;
+        }
+    }
+
+    .nf-btn-fill:active {
+        transform: scale(0.98);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .nf-btn-fill,
+        .nf-btn-fill::before {
+            transition-duration: 0.01s;
+        }
+    }
+
     .nf-label {
         display: block;
         margin-bottom: 7px;

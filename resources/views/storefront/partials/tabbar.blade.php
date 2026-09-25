@@ -1,14 +1,15 @@
 @inject('cart', 'App\Services\CartService')
 @php
     $tabs = [
-        ['label' => 'হোম', 'icon' => 'home', 'url' => route('store.home'), 'on' => request()->routeIs('store.home', 'store.order.confirmation', 'store.track*')],
+        ['label' => 'হোম', 'icon' => 'home', 'url' => route('store.home'), 'on' => request()->routeIs('store.home', 'store.order.confirmation')],
         ['label' => 'শপ', 'icon' => 'shop', 'url' => route('store.shop'), 'on' => request()->routeIs('store.shop*', 'store.product')],
         ['label' => 'অফার', 'icon' => 'offer', 'url' => route('store.offers'), 'on' => request()->routeIs('store.offers')],
+        ['label' => 'ট্র্যাক', 'icon' => 'box', 'url' => route('store.track'), 'on' => request()->routeIs('store.track*')],
         ['label' => 'ব্যাগ', 'icon' => 'bag', 'url' => route('store.cart'), 'on' => request()->routeIs('store.cart', 'store.checkout')],
     ];
 @endphp
 {{-- Mobile bottom tab bar (Nafian Mobile). --}}
-<nav class="sm:hidden fixed inset-x-0 bottom-0 z-50 bg-white grid grid-cols-4 h-[var(--nf-tabbar-h)] px-2 pt-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_22px_-20px_rgba(36,28,26,.8)]" aria-label="প্রধান">
+<nav class="sm:hidden fixed inset-x-0 bottom-0 z-50 bg-white grid grid-cols-5 h-[var(--nf-tabbar-h)] px-2 pt-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_22px_-20px_rgba(36,28,26,.8)]" aria-label="প্রধান">
     @foreach($tabs as $tab)
         <a href="{{ $tab['url'] }}" @class(['flex flex-col items-center justify-center gap-1 text-[11.5px]', 'text-espresso font-semibold' => $tab['on'], 'text-muted font-medium' => ! $tab['on']])
            @if($tab['on']) aria-current="page" @endif>

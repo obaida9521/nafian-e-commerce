@@ -1,0 +1,78 @@
+<!doctype html><html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Badge options</title>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/build/assets/app-DfmasXH1.css">
+<style>
+body{font-family:'Hind Siliguri',sans-serif;background:#FAF9F8;color:#241C1A;padding:24px 16px;margin:0}
+h1{font-size:22px;margin:0 0 4px} p.sub{margin:0 0 22px;color:#6B605B;font-size:14px}
+.row{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:18px;max-width:1200px}
+.opt{background:#fff;border-radius:20px;padding:14px;box-shadow:0 10px 34px -22px rgba(36,28,26,.55)}
+.opt h2{font-size:17px;margin:0 0 10px}
+.pair{display:flex;gap:10px}
+.img{position:relative;flex:1;aspect-ratio:1;border-radius:14px;overflow:hidden;background:#EFEAE6}
+.img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.img.sm{flex:.72}
+.big{margin-top:14px;padding:22px 10px;background:#EFEAE6;border-radius:14px;display:grid;place-items:center}
+.big > span{position:relative!important;transform:scale(2.2);transform-origin:center}
+.pos{position:absolute;left:0;top:12px}
+
+/* shared shape engine */
+.tk{--stub:18px;--sr:1.8px;--sg:6px;--nr:3.6px;--r:8px;position:relative;isolation:isolate;display:inline-flex;align-items:baseline;gap:2px;white-space:nowrap;
+ padding:5px 12px 5px calc(var(--stub) + 9px);color:#241C1A;font-weight:700;line-height:1.3;
+ filter:drop-shadow(0 5px 12px rgba(36,28,26,.16)) drop-shadow(0 1px 1.5px rgba(36,28,26,.12))}
+.tk::before{content:'';position:absolute;inset:0;z-index:-1;border-radius:3px var(--r) var(--r) 3px;
+ background:linear-gradient(90deg,transparent var(--stub),#fff var(--stub)),linear-gradient(180deg,#FFD24A,#F5A50F);
+ -webkit-mask:var(--m);-webkit-mask-composite:source-in;mask:var(--m);mask-composite:intersect}
+.tk .n{font-size:1.3em;letter-spacing:-.01em}
+.tk .u{font-size:.92em;font-weight:600;color:#3B2F2D}
+
+/* A classic voucher */
+.a{--m:radial-gradient(circle at 0 50%,#0000 var(--sr),#000 calc(var(--sr) + .4px)) 0 50%/100% var(--sg) repeat-y,
+      radial-gradient(circle at var(--stub) 0,#0000 var(--nr),#000 calc(var(--nr) + .4px)),
+      radial-gradient(circle at var(--stub) 100%,#0000 var(--nr),#000 calc(var(--nr) + .4px))}
+.a::after{content:'';position:absolute;left:calc(var(--stub) + 3px);top:7px;bottom:7px;border-left:1px dashed rgba(36,28,26,.2)}
+
+/* B punch holes, clean straight edge */
+.b{--m:radial-gradient(circle at calc(var(--stub)/2) 50%,#0000 1.6px,#000 2px) 0 50%/100% 7px repeat-y,
+      radial-gradient(circle at var(--stub) 0,#0000 var(--nr),#000 calc(var(--nr) + .4px)),
+      radial-gradient(circle at var(--stub) 100%,#0000 var(--nr),#000 calc(var(--nr) + .4px))}
+.b::before{border-radius:6px var(--r) var(--r) 6px}
+.b{--stub:16px}
+
+/* C full ticket: scalloped stub + notch on right end */
+.c{--r:4px;--m:radial-gradient(circle at 0 50%,#0000 var(--sr),#000 calc(var(--sr) + .4px)) 0 50%/100% var(--sg) repeat-y,
+      radial-gradient(circle at var(--stub) 0,#0000 var(--nr),#000 calc(var(--nr) + .4px)),
+      radial-gradient(circle at var(--stub) 100%,#0000 var(--nr),#000 calc(var(--nr) + .4px)),
+      radial-gradient(circle at 100% 50%,#0000 4px,#000 4.4px);padding-right:15px}
+.c::after{content:'';position:absolute;left:calc(var(--stub) + 3px);top:7px;bottom:7px;border-left:1px dashed rgba(36,28,26,.2)}
+
+/* D wide stub with sale glyph */
+.d{--stub:24px;--m:radial-gradient(circle at 0 50%,#0000 var(--sr),#000 calc(var(--sr) + .4px)) 0 50%/100% var(--sg) repeat-y,
+      radial-gradient(circle at var(--stub) 0,#0000 var(--nr),#000 calc(var(--nr) + .4px)),
+      radial-gradient(circle at var(--stub) 100%,#0000 var(--nr),#000 calc(var(--nr) + .4px))}
+.d .g{position:absolute;left:3px;width:calc(var(--stub) - 3px);top:0;bottom:0;display:grid;place-items:center;color:#fff}
+</style></head><body>
+<h1>ডিসকাউন্ট ব্যাজ — কোনটা পছন্দ?</h1>
+<p class="sub">প্রতিটি অপশনে: বাঁয়ে ডেস্কটপ কার্ড, ডানে মোবাইল টাইল, নিচে বড় করে দেখানো।</p>
+<div class="row">
+<div class="opt"><h2>A · ক্লাসিক ভাউচার</h2><div class="pair">
+<div class="img"><img src="/storage/7/conversions/power_white_512-thumb.jpg" alt=""><span class="tk a pos" style="font-size:12px"><span class="n">১৫</span><span class="u">% ছাড়</span></span></div>
+<div class="img sm"><img src="/storage/8/conversions/Everyday-thumb.jpg" alt=""><span class="tk a pos" style="font-size:11px;top:9px"><span class="n">১৫</span><span class="u">%</span></span></div>
+</div><div class="big"><span class="tk a" style="font-size:12px"><span class="n">১৫</span><span class="u">% ছাড়</span></span></div></div>
+<div class="opt"><h2>B · পাঞ্চ-হোল টিকিট</h2><div class="pair">
+<div class="img"><img src="/storage/7/conversions/power_white_512-thumb.jpg" alt=""><span class="tk b pos" style="font-size:12px"><span class="n">১৫</span><span class="u">% ছাড়</span></span></div>
+<div class="img sm"><img src="/storage/8/conversions/Everyday-thumb.jpg" alt=""><span class="tk b pos" style="font-size:11px;top:9px"><span class="n">১৫</span><span class="u">%</span></span></div>
+</div><div class="big"><span class="tk b" style="font-size:12px"><span class="n">১৫</span><span class="u">% ছাড়</span></span></div></div>
+<div class="opt"><h2>C · দুই পাশে কাটা টিকিট</h2><div class="pair">
+<div class="img"><img src="/storage/7/conversions/power_white_512-thumb.jpg" alt=""><span class="tk c pos" style="font-size:12px"><span class="n">১৫</span><span class="u">% ছাড়</span></span></div>
+<div class="img sm"><img src="/storage/8/conversions/Everyday-thumb.jpg" alt=""><span class="tk c pos" style="font-size:11px;top:9px"><span class="n">১৫</span><span class="u">%</span></span></div>
+</div><div class="big"><span class="tk c" style="font-size:12px"><span class="n">১৫</span><span class="u">% ছাড়</span></span></div></div>
+<div class="opt"><h2>D · চওড়া হলুদ অংশ + আইকন</h2><div class="pair">
+<div class="img"><img src="/storage/7/conversions/power_white_512-thumb.jpg" alt=""><span class="tk d pos" style="font-size:12px"><span class="g"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></span><span class="n">১৫</span><span class="u">% ছাড়</span></span></div>
+<div class="img sm"><img src="/storage/8/conversions/Everyday-thumb.jpg" alt=""><span class="tk d pos" style="font-size:11px;top:9px"><span class="g"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></span><span class="n">১৫</span><span class="u">%</span></span></div>
+</div><div class="big"><span class="tk d" style="font-size:12px"><span class="g"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></span><span class="n">১৫</span><span class="u">% ছাড়</span></span></div></div>
+<div class="opt"><h2>E · এখনকার ডিজাইন</h2><div class="pair">
+<div class="img"><img src="/storage/7/conversions/power_white_512-thumb.jpg" alt=""><span class="nf-ticket absolute left-0 top-3 py-1.5 text-[12px] font-bold">১৫% ছাড়</span></div>
+<div class="img sm"><img src="/storage/8/conversions/Everyday-thumb.jpg" alt=""><span class="nf-ticket absolute left-0 top-2.5 py-[5px] text-[11px] font-bold">১৫%</span></div>
+</div><div class="big"><span class="nf-ticket py-1.5 text-[12px] font-bold">১৫% ছাড়</span></div></div>
+</div></body></html>

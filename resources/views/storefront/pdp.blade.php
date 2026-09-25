@@ -104,7 +104,7 @@
             </div>
 
             <template x-if="variant && variant.compare > variant.price && ! playing">
-                <span class="absolute left-5 bottom-10 bg-espresso text-white rounded-full px-[13px] py-1.5 text-[12px] font-semibold"
+                <span class="nf-ticket absolute left-5 bottom-10 py-1.5 text-[12px] font-bold"
                       x-text="bnNumber(Math.round((variant.compare - variant.price) / variant.compare * 100)) + '% ছাড়'"></span>
             </template>
 
@@ -198,11 +198,11 @@
 
             <div class="mt-3.5 flex gap-2.5">
                 @if($totalReviews > $previewReviews->count())
-                    <a href="{{ route('store.product.reviews', $product->slug) }}" class="flex-1 text-center bg-espresso text-white rounded-full py-3.5 text-[14.5px] font-semibold">
+                    <a href="{{ route('store.product.reviews', $product->slug) }}" class="flex-1 text-center bg-espresso text-white rounded-xl py-3.5 text-[14.5px] font-semibold">
                         সব {{ bn_digits($totalReviews) }}টি রিভিউ দেখুন
                     </a>
                 @endif
-                <a href="{{ route('store.product.reviews', $product->slug) }}#write-review" class="flex-1 text-center bg-sand-3 text-espresso rounded-full py-3.5 text-[14.5px] font-semibold">
+                <a href="{{ route('store.product.reviews', $product->slug) }}#write-review" class="flex-1 text-center bg-sand-3 text-espresso rounded-xl py-3.5 text-[14.5px] font-semibold">
                     {{ $userReview ? 'রিভিউ সম্পাদনা' : 'রিভিউ লিখুন' }}
                 </a>
             </div>
@@ -259,7 +259,7 @@
                      style="background:linear-gradient(160deg, color-mix(in srgb, {{ $product->tone ?? '#C2BBB0' }} 12%, #F4F1EE), color-mix(in srgb, {{ $product->tone ?? '#C2BBB0' }} 32%, #E7E1DC));">
                     @include('storefront.partials.pdp-stage', ['slides' => $slides, 'alt' => $product->name, 'where' => 'desk'])
                     <template x-if="variant && variant.compare > variant.price && ! playing">
-                        <span class="absolute left-[18px] top-[18px] bg-espresso text-white rounded-full px-[15px] py-[7px] text-[12.5px] font-semibold"
+                        <span class="nf-ticket absolute left-[18px] top-[18px] py-[7px] text-[12.5px] font-bold"
                               x-text="bnNumber(Math.round((variant.compare - variant.price) / variant.compare * 100)) + '% ছাড়'"></span>
                     </template>
                 </div>
@@ -305,7 +305,7 @@
                 @endforeach
 
                 <div class="mt-6 flex gap-3 items-center flex-wrap">
-                    <div class="flex items-center gap-[18px] bg-sand rounded-full px-5 py-3">
+                    <div class="flex items-center gap-[18px] bg-sand rounded-xl px-5 py-3">
                         <button type="button" @click="quantity = Math.max(1, quantity - 1)" class="text-[20px] text-muted leading-none" aria-label="কমান">−</button>
                         <span class="text-[16px] font-semibold min-w-[20px] text-center" x-text="bnNumber(quantity)"></span>
                         <button type="button" @click="quantity = Math.min(available, quantity + 1)" :disabled="quantity >= available" class="text-[20px] text-espresso leading-none disabled:opacity-30" aria-label="বাড়ান">+</button>
@@ -317,14 +317,14 @@
                                 @csrf
                                 <input type="hidden" name="variant_id" :value="variant?.id">
                                 <input type="hidden" name="quantity" :value="quantity">
-                                <button class="w-full bg-espresso text-white rounded-full px-8 py-[17px] text-[15.5px] font-semibold hover:bg-ink">ব্যাগে যোগ করুন</button>
+                                <button class="w-full bg-espresso text-white rounded-xl px-8 py-[17px] text-[15.5px] font-semibold hover:bg-ink">ব্যাগে যোগ করুন</button>
                             </form>
                             <form method="POST" action="{{ route('store.cart.store') }}" class="js-cart-form flex-1 min-w-[160px]">
                                 @csrf
                                 <input type="hidden" name="variant_id" :value="variant?.id">
                                 <input type="hidden" name="quantity" :value="quantity">
                                 <input type="hidden" name="buy_now" value="1">
-                                <button class="w-full bg-accent-soft text-accent rounded-full px-8 py-[17px] text-[15.5px] font-semibold">এখনই কিনুন</button>
+                                <button class="w-full bg-accent-soft text-accent rounded-xl px-8 py-[17px] text-[15.5px] font-semibold">এখনই কিনুন</button>
                             </form>
                         </div>
                     </template>
@@ -340,8 +340,8 @@
                                     .finally(() => busy = false);
                               ">
                             @csrf
-                            <input name="contact" required maxlength="120" placeholder="ইমেইল বা মোবাইল" class="flex-1 bg-sand rounded-full px-5 py-[17px] text-[14.5px] outline-none">
-                            <button :disabled="busy" class="bg-espresso text-white rounded-full px-7 text-[14.5px] font-semibold disabled:opacity-60">স্টকে এলে জানান</button>
+                            <input name="contact" required maxlength="120" placeholder="ইমেইল বা মোবাইল" class="flex-1 bg-sand rounded-xl px-5 py-[17px] text-[14.5px] outline-none">
+                            <button :disabled="busy" class="bg-espresso text-white rounded-xl px-7 text-[14.5px] font-semibold disabled:opacity-60">স্টকে এলে জানান</button>
                         </form>
                     </template>
                 </div>
@@ -371,7 +371,7 @@
             <div class="grid desk:grid-cols-[300px_1fr] gap-8 desk:gap-12 items-start">
                 <div class="flex flex-col gap-4 desk:sticky desk:top-24">
                     @include('storefront.partials.review-summary')
-                    <a href="#write-review" class="block text-center bg-sand-3 text-espresso rounded-full py-3.5 text-[14.5px] font-semibold hover:bg-sand-2">
+                    <a href="#write-review" class="block text-center bg-sand-3 text-espresso rounded-xl py-3.5 text-[14.5px] font-semibold hover:bg-sand-2">
                         {{ $userReview ? 'আপনার রিভিউ সম্পাদনা করুন' : 'রিভিউ লিখুন' }}
                     </a>
                 </div>
@@ -380,7 +380,7 @@
                     @include('storefront.partials.review-list', ['reviews' => $previewReviews])
 
                     @if($totalReviews > $previewReviews->count())
-                        <a href="{{ route('store.product.reviews', $product->slug) }}" class="mt-4 block text-center bg-espresso text-white rounded-full py-3.5 text-[14.5px] font-semibold hover:bg-ink">
+                        <a href="{{ route('store.product.reviews', $product->slug) }}" class="mt-4 block text-center bg-espresso text-white rounded-xl py-3.5 text-[14.5px] font-semibold hover:bg-ink">
                             সব {{ bn_digits($totalReviews) }}টি রিভিউ দেখুন
                         </a>
                     @endif
@@ -415,12 +415,12 @@
             <form method="POST" action="{{ route('store.cart.store') }}" class="js-cart-form flex-1">
                 @csrf
                 <input type="hidden" name="variant_id" :value="variant?.id">
-                <button class="w-full bg-espresso text-white rounded-full py-[15px] text-[15px] font-semibold">ব্যাগে যোগ করুন</button>
+                <button class="w-full bg-espresso text-white rounded-xl py-[15px] text-[15px] font-semibold">ব্যাগে যোগ করুন</button>
             </form>
         </template>
         <template x-if="available < 1">
             <a href="#" @click.prevent="openPanel = null; $dispatch('cart:toast', { type: 'error', msg: 'পণ্যটি এখন স্টকে নেই।' })"
-               class="flex-1 text-center bg-sand text-muted rounded-full py-[15px] text-[15px] font-semibold">স্টকে নেই</a>
+               class="flex-1 text-center bg-sand text-muted rounded-xl py-[15px] text-[15px] font-semibold">স্টকে নেই</a>
         </template>
     </div>
 </div>

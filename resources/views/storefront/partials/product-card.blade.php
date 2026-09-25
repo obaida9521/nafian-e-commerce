@@ -25,9 +25,9 @@
     <a href="{{ $url }}" class="block rounded-[20px] overflow-hidden bg-white nf-shadow group">
         <x-ui.product-image :product="$product" hover class="aspect-square">
             @if($discount > 0)
-                <span class="absolute left-3.5 top-3.5 bg-espresso text-white rounded-full px-[13px] py-1.5 text-[12px] font-semibold">{{ bn_digits($discount) }}% ছাড়</span>
+                <span class="nf-ticket absolute left-3.5 top-3.5 py-1.5 text-[12px] font-bold">{{ bn_digits($discount) }}% ছাড়</span>
             @elseif(! $inStock)
-                <span class="absolute inset-0 grid place-items-center"><span class="bg-[#241C1A]/70 text-white rounded-full px-[18px] py-[9px] text-[13px] font-medium">স্টকে নেই</span></span>
+                <span class="nf-soldout"><span class="text-[13px]">স্টকে নেই</span></span>
             @endif
         </x-ui.product-image>
         <div class="px-[18px] pt-4 pb-5">
@@ -45,9 +45,9 @@
     <a href="{{ $url }}" class="block w-[168px] flex-none">
         <x-ui.product-image :product="$product" hover class="h-[168px] rounded-[18px]">
             @if($discount > 0)
-                <span class="absolute left-2.5 top-2.5 bg-espresso text-white rounded-full px-[11px] py-[5px] text-[11px] font-semibold">{{ bn_digits($discount) }}%</span>
+                <span class="nf-ticket absolute left-2.5 top-2.5 py-[5px] text-[11px] font-bold">{{ bn_digits($discount) }}%</span>
             @elseif(! $inStock)
-                <span class="absolute left-2.5 top-2.5 bg-[#241C1A]/70 text-white rounded-full px-[11px] py-[5px] text-[11px] font-medium">স্টকে নেই</span>
+                <span class="nf-soldout"><span class="text-[12px]">স্টকে নেই</span></span>
             @endif
         </x-ui.product-image>
         <div class="mt-2.5 text-[15.5px] font-semibold truncate">{{ $product->name }}</div>
@@ -65,11 +65,9 @@
         <a href="{{ $url }}" class="block">
             <x-ui.product-image :product="$product" hover class="aspect-square rounded-[18px] sm:rounded-none">
                 @if(! $inStock)
-                    <span class="absolute inset-0 grid place-items-center">
-                        <span class="bg-[#241C1A]/70 text-white rounded-full px-[18px] py-[9px] text-[12.5px] sm:text-[13.5px] font-medium">স্টকে নেই</span>
-                    </span>
+                    <span class="nf-soldout"><span class="text-[12.5px] sm:text-[13.5px]">স্টকে নেই</span></span>
                 @elseif($discount > 0)
-                    <span class="absolute left-2.5 top-2.5 sm:left-3.5 sm:top-3.5 bg-espresso text-white rounded-full px-[11px] py-[5px] sm:px-[13px] sm:py-1.5 text-[11px] sm:text-[12px] font-semibold">
+                    <span class="nf-ticket absolute left-2.5 top-2.5 sm:left-3.5 sm:top-3.5 py-[5px] sm:py-1.5 text-[11px] sm:text-[12px] font-bold">
                         {{ bn_digits($discount) }}%<span class="hidden sm:inline"> ছাড়</span>
                     </span>
                 @elseif($product->badge)
@@ -105,7 +103,7 @@
             <div class="hidden sm:block mt-auto pt-4 relative">
                 @if(! $inStock)
                     <button type="button" x-show="! notify" @click="notify = true; $nextTick(() => $refs.contact.focus())"
-                            class="w-full bg-sand text-muted rounded-full py-3.5 text-[14.5px] font-semibold hover:bg-line">স্টকে এলে জানান</button>
+                            class="w-full bg-sand text-muted rounded-xl py-3.5 text-[14.5px] font-semibold transition-colors duration-300 hover:bg-line hover:text-espresso">স্টকে এলে জানান</button>
                     <form x-show="notify" x-cloak method="POST" action="{{ route('store.product.restock', $product->slug) }}"
                           x-data="{ busy: false }"
                           @submit.prevent="
@@ -118,18 +116,18 @@
                           class="flex gap-2">
                         @csrf
                         <input x-ref="contact" name="contact" required maxlength="120" placeholder="ইমেইল বা মোবাইল"
-                               class="min-w-0 flex-1 bg-sand rounded-full px-4 py-3 text-[14px] text-espresso placeholder-muted outline-none">
-                        <button :disabled="busy" class="bg-espresso text-white rounded-full px-4 text-[14px] font-semibold disabled:opacity-60">জানান</button>
+                               class="min-w-0 flex-1 bg-sand rounded-xl px-4 py-3 text-[14px] text-espresso placeholder-muted outline-none">
+                        <button :disabled="busy" class="bg-espresso text-white rounded-xl px-4 text-[14px] font-semibold transition-colors duration-300 hover:bg-ink disabled:opacity-60">জানান</button>
                     </form>
                 @elseif(! $hasMultiple)
                     <form method="POST" action="{{ route('store.cart.store') }}" class="js-cart-form">
                         @csrf
                         <input type="hidden" name="variant_id" value="{{ $firstInStock?->id }}">
-                        <button class="w-full bg-sand-2 text-espresso rounded-full py-3.5 text-[14.5px] font-semibold transition-colors group-hover:bg-espresso group-hover:text-white">ব্যাগে যোগ করুন</button>
+                        <button class="nf-btn-fill w-full rounded-xl py-3.5 text-[14.5px] font-semibold">ব্যাগে যোগ করুন</button>
                     </form>
                 @else
                     <button @click="pick = ! pick" type="button"
-                            class="w-full bg-sand-2 text-espresso rounded-full py-3.5 text-[14.5px] font-semibold transition-colors group-hover:bg-espresso group-hover:text-white">
+                            class="nf-btn-fill w-full rounded-xl py-3.5 text-[14.5px] font-semibold">
                         <span x-text="pick ? 'বন্ধ করুন' : 'ব্যাগে যোগ করুন'"></span>
                     </button>
 

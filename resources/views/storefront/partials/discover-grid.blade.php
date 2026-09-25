@@ -32,7 +32,7 @@
     </div>
     <div x-show="hasMore" x-transition.opacity class="mt-6 sm:mt-9 flex justify-center">
         <button type="button" @click="loadMore()" :disabled="loading"
-                class="inline-flex items-center gap-2.5 rounded-full border border-line bg-white px-7 py-3 sm:px-9 sm:py-3.5 text-[14px] sm:text-[15px] font-semibold text-espresso transition hover:border-espresso hover:bg-espresso hover:text-white disabled:opacity-70 disabled:hover:bg-white disabled:hover:text-espresso">
+                class="inline-flex items-center gap-2.5 rounded-full border border-line bg-white px-7 py-3 sm:px-9 sm:py-3.5 text-[14px] sm:text-[15px] font-semibold text-espresso transition-colors duration-[1000ms] ease-in-out motion-reduce:duration-0 hover:border-espresso hover:bg-espresso hover:text-white disabled:opacity-70 disabled:hover:bg-white disabled:hover:text-espresso">
             <span x-show="loading" x-cloak class="nf-spinner !w-4 !h-4 !border-2"></span>
             <span x-text="loading ? 'লোড হচ্ছে…' : 'আরও দেখুন'">আরও দেখুন</span>
         </button>
